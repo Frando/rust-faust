@@ -1,6 +1,6 @@
 # rust-faust
 
-A better integration of [https://faust.grame.fr/](FAUST) for [Rust](https://www.rust-lang.org/).
+A better integration of [FAUST](https://faust.grame.fr/) for [Rust](https://www.rust-lang.org/).
 
 WIP but very open to contributions! Please just open issues or come the [RustAudio Discord](https://rust-audio.discourse.group/) and ping @Frando.
 
