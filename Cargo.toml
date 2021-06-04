@@ -1,2 +1,2 @@
 [workspace]
-members = ["example-jack", "faust-build", "faust-types", "faust-state"]
+members = ["example-jack", "example-midi-jack", "faust-build", "faust-types", "faust-state"]
