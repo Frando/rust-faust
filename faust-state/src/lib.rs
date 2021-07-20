@@ -306,7 +306,6 @@ impl ParamsBuilder {
         }
     }
     fn close_group(&mut self) {
-        eprintln!("close");
         self.prefix.pop();
     }
 
