@@ -1,6 +1,6 @@
 use faust_types::*;
 use rtrb::{Consumer, Producer, RingBuffer};
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 const DEFAULT_NAME: &str = "rust_faust";
 
@@ -41,7 +41,7 @@ where
             state: HashMap::with_capacity(params.len()),
         };
 
-        let mut params_by_path = HashMap::new();
+        let mut params_by_path = BTreeMap::new();
         for (idx, node) in params.iter() {
             params_by_path.insert(node.path(), *idx);
             state.state.insert(*idx, node.init_value());
@@ -139,7 +139,7 @@ pub struct StateHandle {
     pub state: State,
     meta: HashMap<String, String>,
     params: HashMap<i32, Node>,
-    params_by_path: HashMap<String, i32>,
+    params_by_path: BTreeMap<String, i32>,
     main_rx: Consumer<State>,
     main_tx: Producer<State>,
 }
@@ -192,6 +192,12 @@ impl StateHandle {
 
     pub fn params(&self) -> &HashMap<i32, Node> {
         &self.params
+    }
+
+    pub fn params_by_path(&self) -> impl Iterator<Item = (&String, Option<&f32>)> {
+        self.params_by_path
+            .iter()
+            .map(move |(path, idx)| (path, self.get_param(*idx).clone()))
     }
 
     pub fn meta(&self) -> &HashMap<String, String> {
