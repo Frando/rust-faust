@@ -2,8 +2,7 @@ use faust_state::DspHandle;
 use faust_types::FaustDsp;
 use jack::AudioIn;
 use jack::*;
-use smallvec::SmallVec;
-use std::io;
+use std::{io, slice};
 
 pub fn run_dsp<T>(mut dsp: DspHandle<T>)
 where
@@ -18,24 +17,52 @@ where
         create_jack_client(dsp.name(), num_inputs as usize, num_outputs as usize);
 
     // Init DSP with a given sample rate
-    dsp.init(client.sample_rate() as i32);
+    let sample_rate = client.sample_rate();
+    dsp.init(sample_rate as i32);
+
+    // Init input and output buffers
+    let buffer_size = client.buffer_size() as usize;
+    let mut inputs: Vec<Vec<f32>> = vec![vec![0_f32; buffer_size]; num_inputs];
+    let mut outputs: Vec<Vec<f32>> = vec![vec![0_f32; buffer_size]; num_outputs];
+
+    // Map our Vec<Vec<f32>> to a Vec<&f[32]> to create a buffer for the faust lib
+    let buffer_input: Vec<&[f32]> = inputs
+        .iter()
+        .map(|input| unsafe { slice::from_raw_parts(input.as_ptr(), buffer_size) })
+        .collect();
+
+    // Map our Vec<Vec<f32>> to a Vec<&f[32]> to create a buffer for the faust lib
+    let mut buffer_output: Vec<&mut [f32]> = outputs
+        .iter_mut()
+        .map(|output| unsafe { slice::from_raw_parts_mut(output.as_mut_ptr(), buffer_size) })
+        .collect();
 
     // Create JACK process closure that runs for each buffer
     let process_callback = move |_: &jack::Client, ps: &jack::ProcessScope| -> jack::Control {
-        // TODO: Make sure that this doesn't allocate.
-        let mut inputs = SmallVec::<[&[f32]; 64]>::with_capacity(num_inputs as usize);
-        let mut outputs = SmallVec::<[&mut [f32]; 64]>::with_capacity(num_outputs as usize);
         let len = ps.n_frames();
-        for port in in_ports.iter() {
-            inputs.push(port.as_slice(ps));
+        assert!(len as usize <= buffer_size);
+
+        for index_port in 0..num_inputs {
+            let port = in_ports[index_port].as_slice(ps);
+            for index_sample in 0..buffer_size {
+                inputs[index_port][index_sample] = port[index_sample];
+            }
         }
-        for port in out_ports.iter_mut() {
-            outputs.push(port.as_mut_slice(ps));
+
+        for index_port in 0..num_outputs {
+            let port = out_ports[index_port].as_mut_slice(ps);
+            for index_sample in 0..buffer_size {
+                outputs[index_port][index_sample] = port[index_sample];
+            }
         }
 
         // Call the update_and_compute handler on the Faust DSP. This first processes param changes
         // from the State handler and then computes the outputs from the inputs and params.
-        dsp.update_and_compute(len as i32, &inputs[..], &mut outputs[..]);
+        dsp.update_and_compute(
+            len as i32,
+            buffer_input.as_slice(),
+            buffer_output.as_mut_slice(),
+        );
         jack::Control::Continue
     };
     // Init JACK process handler.
