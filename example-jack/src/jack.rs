@@ -42,27 +42,22 @@ where
         let len = ps.n_frames();
         assert!(len as usize <= buffer_size);
 
+        // Copy audio input for all ports from jack to the faust input buffer
         for index_port in 0..num_inputs {
             let port = in_ports[index_port].as_slice(ps);
-            for index_sample in 0..len as usize {
-                inputs[index_port][index_sample] = port[index_sample];
-            }
-        }
-
-        for index_port in 0..num_outputs {
-            let port = out_ports[index_port].as_mut_slice(ps);
-            for index_sample in 0..len as usize {
-                outputs[index_port][index_sample] = port[index_sample];
-            }
+            inputs[index_port][0..len as usize].copy_from_slice(&port);
         }
 
         // Call the update_and_compute handler on the Faust DSP. This first processes param changes
         // from the State handler and then computes the outputs from the inputs and params.
-        dsp.update_and_compute(
-            len as i32,
-            buffer_input.as_slice(),
-            buffer_output.as_mut_slice(),
-        );
+        dsp.update_and_compute(len as i32, &buffer_input[..], &mut buffer_output[..]);
+
+        // Copy audio output for all ports from faust to the jack output
+        for index_port in 0..num_outputs {
+            let port = out_ports[index_port].as_mut_slice(ps);
+            port.copy_from_slice(&outputs[index_port][0..len as usize]);
+        }
+
         jack::Control::Continue
     };
     // Init JACK process handler.
