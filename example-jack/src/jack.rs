@@ -44,14 +44,14 @@ where
 
         for index_port in 0..num_inputs {
             let port = in_ports[index_port].as_slice(ps);
-            for index_sample in 0..buffer_size {
+            for index_sample in 0..len as usize {
                 inputs[index_port][index_sample] = port[index_sample];
             }
         }
 
         for index_port in 0..num_outputs {
             let port = out_ports[index_port].as_mut_slice(ps);
-            for index_sample in 0..buffer_size {
+            for index_sample in 0..len as usize {
                 outputs[index_port][index_sample] = port[index_sample];
             }
         }
