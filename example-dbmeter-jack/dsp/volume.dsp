@@ -11,10 +11,6 @@ declare copyright 	"(c)GRAME 2006";
 import("stdfaust.lib");
 
 
-vmeter(i, x)		= attach(x, envelop(x) : vbargraph("test%i[unit:dB]", -70, 10));
-hmeter(x)		= attach(x, envelop(x) : hbargraph("[unit:dB]", -70, 10));
-
-envelop			= abs : max(ba.db2linear(-70)) : ba.linear2db : min(10)  : max ~ -(80.0/ma.SR);
-null(x)         = attach(0,x);
-process 		= hgroup("8 channels dB meter", par(i,8, vgroup("vu%i", vmeter(i))));
+envelop			= abs : max(ba.db2linear(-70)) : ba.linear2db : min(10)  : max ~ -(320.0/ma.SR);
+process 		= _ : envelop : vbargraph("channel0[unit:dB]", -70, 10) : _;
 

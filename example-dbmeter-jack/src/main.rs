@@ -20,7 +20,8 @@ fn main() {
     // Spawn a thread to do state changes.
     // This could be a GUI thread or API server.
     thread::spawn(move || loop {
-        eprintln!("volume: {:?} dB", state.get_by_path("vu1/test1").unwrap());
+        state.update();
+        eprintln!("volume: {:?} dB", state.get_by_path("channel0").unwrap());
         thread::sleep(Duration::from_millis(200));
     });
 
