@@ -1,2 +1,8 @@
 [workspace]
-members = ["example-jack", "example-dbmeter-jack", "faust-build", "faust-types", "faust-state"]
+members = [
+  "faust-build", 
+  "faust-types", 
+  "faust-state",
+  "examples/example-jack",
+  "examples/example-dbmeter-jack", 
+]
