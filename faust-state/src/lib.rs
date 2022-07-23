@@ -243,6 +243,7 @@ pub struct Node {
     prefix: String,
     typ: NodeType,
     props: Option<Props>,
+    metadata: Vec<[String; 2]>
 }
 
 impl Node {
@@ -310,17 +311,30 @@ impl ParamsBuilder {
         self.prefix.pop();
     }
 
-    fn add_widget(&mut self, label: &str, idx: ParamIndex, typ: NodeType, props: Option<Props>) {
+    fn add_widget(&mut self, label: &str, idx: ParamIndex, typ: NodeType, props: Option<Props>, metadata: Option<Vec<[String; 2]>>) {
         let prefix = self.prefix[..].join("/").to_string();
         let idx = idx.0;
-        let node = Node {
-            idx,
-            label: label.to_string(),
-            prefix,
-            typ,
-            props,
-        };
-        self.inner.insert(idx, node);
+        if self.inner.contains_key(&idx) {
+            let node = self.inner.get_mut(&idx).unwrap();
+            node.label = label.to_string(); 
+            node.typ = typ;
+            if props.is_some() {
+                node.props = props;
+            }
+            if let Some(mut metadata) = metadata {
+                node.metadata.append(metadata.as_mut());
+            }
+        } else {
+            let node = Node {
+                idx,
+                label: label.to_string(),
+                prefix,
+                typ,
+                props,
+                metadata: metadata.unwrap_or_default()
+            };
+            self.inner.insert(idx, node);
+        }
     }
 }
 
@@ -340,10 +354,10 @@ impl UI<f32> for ParamsBuilder {
 
     // -- active widgets
     fn add_button(&mut self, label: &str, param: ParamIndex) {
-        self.add_widget(label, param, NodeType::Button, None);
+        self.add_widget(label, param, NodeType::Button, None, None);
     }
     fn add_check_button(&mut self, label: &str, param: ParamIndex) {
-        self.add_widget(label, param, NodeType::Toggle, None);
+        self.add_widget(label, param, NodeType::Toggle, None, None);
     }
     fn add_vertical_slider(
         &mut self,
@@ -361,7 +375,7 @@ impl UI<f32> for ParamsBuilder {
             max,
             step,
         };
-        self.add_widget(label, param, typ, Some(props));
+        self.add_widget(label, param, typ, Some(props), None);
     }
     fn add_horizontal_slider(
         &mut self,
@@ -379,7 +393,7 @@ impl UI<f32> for ParamsBuilder {
             max,
             step,
         };
-        self.add_widget(label, param, typ, Some(props));
+        self.add_widget(label, param, typ, Some(props), None);
     }
     fn add_num_entry(
         &mut self,
@@ -397,7 +411,7 @@ impl UI<f32> for ParamsBuilder {
             max,
             step,
         };
-        self.add_widget(label, param, typ, Some(props));
+        self.add_widget(label, param, typ, Some(props), None);
     }
 
     // -- passive widgets
@@ -409,7 +423,7 @@ impl UI<f32> for ParamsBuilder {
             max,
             step: 0.,
         };
-        self.add_widget(label, param, typ, Some(props));
+        self.add_widget(label, param, typ, Some(props), None);
     }
     fn add_vertical_bargraph(&mut self, label: &str, param: ParamIndex, min: f32, max: f32) {
         let typ = NodeType::Value;
@@ -419,9 +433,25 @@ impl UI<f32> for ParamsBuilder {
             max,
             step: 0.,
         };
-        self.add_widget(label, param, typ, Some(props));
+        self.add_widget(label, param, typ, Some(props), None);
     }
 
     // -- metadata declarations
-    fn declare(&mut self, _param: Option<ParamIndex>, _key: &str, _value: &str) {}
+    fn declare(&mut self, param: Option<ParamIndex>, key: &str, value: &str) {
+        if let Some(param_index) = param {
+            if !self.inner.contains_key(&param_index.0) {
+                self.add_widget(
+                    "Unknown",
+                    param_index,
+                    NodeType::Value,
+                    None,
+                    Some(vec!([key.to_string(), value.to_string()]))
+                )
+            } else {
+                if let Some(node) = self.inner.get_mut(&param_index.0) {
+                    node.metadata.push([key.to_string(), value.to_string()]);
+                } 
+            }
+        }
+    }
 }

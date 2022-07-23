@@ -12,7 +12,7 @@ pub use libm;
 pub type F32 = f32;
 pub type F64 = f64;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct ParamIndex(pub i32);
 
 pub struct Soundfile<'a> {
