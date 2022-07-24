@@ -1,0 +1,67 @@
+export global Logic := {
+  callback roundoff(float, int) -> string;
+}
+
+export Slider := Rectangle {
+    property<string> text;
+    property<float> value: 0.0;
+    property<color> indicatorColor: lightgreen;
+    callback changed();
+    
+    height: text.height + padding-top + padding-bottom;
+    width: text.width + padding-left + padding-right;
+    clip: true;
+
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-top: 3px;
+    padding-bottom: 3px;
+
+    border-color: black;
+    border-radius: 3px;
+    border-width: 1px;
+
+    TouchArea {
+    
+        valueIndicator := Rectangle {
+            width: root.width * value;
+            border-width: root.border-width;
+            border-radius: root.border-radius;
+            
+            color: root.indicatorColor;
+        }
+
+        text := Text {
+            x: root.padding-right;
+            y: root.padding-top;
+            text: root.text + ": " + Logic.roundoff(root.value, 2);
+        }
+        borderRectanlge := Rectangle {
+        border-color: root.border-color;
+        border-width: root.border-width;
+        border-radius: root.border-radius;
+        }
+
+        moved => {
+            root.value = min(max(mouse-x / root.width, 0.0), 1.0);
+            changed();
+        }
+
+        clicked => {
+            moved();
+        }
+    }
+}
+
+HelloWorld := Window {
+  property<float> volume: 0.0;
+  callback ui_update(string, float);
+
+  Slider {
+    value <=> volume;
+    text: "Volume";
+    changed => {
+      ui_update("volume", value);
+    }
+  }
+}
