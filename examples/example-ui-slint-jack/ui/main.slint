@@ -53,8 +53,48 @@ export Slider := Rectangle {
     }
 }
 
+
+export VUMeter :=  Rectangle {
+    property<float> value: 0;
+    
+    property<length> height_bar: 10px;
+    property<length> width_bar: 10px;
+    property<length> padding_bar: 1px;
+    property<length> border_bar: 1px;
+    property<[color]> bar_colors: [
+        Colors.red,
+        Colors.green,
+        Colors.green,
+        Colors.green,
+        Colors.green,
+        Colors.green,
+        Colors.green,
+        Colors.green,
+        Colors.green,
+    ];
+    property<int> level_i: bar_colors.length * value;
+    Rectangle {
+        width: width_bar ;
+        height: (height_bar - padding_bar) * (bar_colors.length) + border_bar * 2;
+        background: white;
+        border-width: 1px;
+        border-color: black;
+        VerticalLayout {
+            padding: padding_bar;
+            for color[index] in bar_colors : Rectangle {
+                height: height_bar - padding_bar;
+                width: width_bar - padding_bar * 2 ;
+                background: bar_colors.length - index > level_i ? white : color;
+                border-width: border_bar;
+                border-color: lightgrey;
+            }
+        }
+    }
+}
+
 HelloWorld := Window {
   property<float> volume: 0.0;
+  property<float> vumeter: 0.0;
   callback ui_update(string, float);
 
   Slider {
@@ -63,5 +103,16 @@ HelloWorld := Window {
     changed => {
       ui_update("volume", value);
     }
+  }
+
+
+  Text {
+    y: 60px;
+    x: 20px;
+    text: vumeter + "dB";
+  }
+
+  VUMeter {
+    value: vumeter / 70 + 1;
   }
 }
