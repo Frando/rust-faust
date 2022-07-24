@@ -93,11 +93,14 @@ export VUMeter :=  Rectangle {
 }
 
 HelloWorld := Window {
+  width: 100px;
+  height: 150px;
   property<float> volume: 0.0;
   property<float> vumeter: 0.0;
   callback ui_update(string, float);
 
   Slider {
+    y: 100px;
     value <=> volume;
     text: "Volume";
     changed => {
@@ -109,7 +112,7 @@ HelloWorld := Window {
   Text {
     y: 60px;
     x: 20px;
-    text: vumeter + "dB";
+    text: Logic.roundoff(vumeter, 2) + "dB";
   }
 
   VUMeter {
