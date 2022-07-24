@@ -10,9 +10,8 @@ declare copyright 	"(c)GRAME 2006";
 
 import("stdfaust.lib");
 
-
-volume = hslider("volume", 0, 0, 1, 0.01) : si.smoo;
-vumeter(x) = attach(x, envelop(x) : hbargraph("[2][unit:dB]", -70, +5));
-envelop = abs : max ~ -(1.0/ma.SR) : max(ba.db2linear(-70)) : ba.linear2db;
-process = _ : _ * volume : vumeter : _;
+envelop			= abs : max(ba.db2linear(-70)) : ba.linear2db : min(10)  : max ~ -(320.0/ma.SR);
+vumeter         = _ <: attach(envelop : vbargraph("vumeter", -70, 10)) : _;
+volume = vslider("volume", 1, 0, 1, 0.1) : si.smoo;
+process 		= _ : vumeter : _ * volume ;
 

@@ -21,7 +21,7 @@ where
     dsp.init(sample_rate as i32);
 
     // Init input and output buffers
-    let buffer_size = client.buffer_size() as usize * 2;
+    let buffer_size = (client.buffer_size() * 2) as usize;
     let mut inputs: Vec<Vec<f32>> = vec![vec![0_f32; buffer_size]; num_inputs];
     let mut outputs: Vec<Vec<f32>> = vec![vec![0_f32; buffer_size]; num_outputs];
 
@@ -40,10 +40,8 @@ where
     // Create JACK process closure that runs for each buffer
     let process_callback = move |_: &jack::Client, ps: &jack::ProcessScope| -> jack::Control {
         let len = ps.n_frames();
-
         if (len as usize > buffer_size) {
-            panic!("jack request bigger buffer ({}) then what we allocated ({})", len, buffer_size);
-
+            panic!("JACK wants {} samples but our buffer can only hold {}", len, buffer_size);
         }
 
         // Copy audio input for all ports from jack to the faust input buffer
@@ -71,7 +69,7 @@ where
     let active_client = jack::AsyncClient::new(client, (), process).unwrap();
 
     // Wait for user input to quit
-    println!("Press CTRL+C to quit...");
+    println!("Press enter/return to quit...");
     let mut user_input = String::new();
     io::stdin().read_line(&mut user_input).ok();
     active_client.deactivate().unwrap();
