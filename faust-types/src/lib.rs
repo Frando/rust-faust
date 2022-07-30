@@ -15,8 +15,8 @@ pub type F64 = f64;
 #[derive(Copy, Clone, Debug)]
 pub struct ParamIndex(pub i32);
 
-pub struct Soundfile<'a> {
-    fBuffers: &'a &'a F32,
+pub struct Soundfile<'a, T> {
+    fBuffers: &'a &'a T,
     fLength: &'a i32,
     fSR: &'a i32,
     fOffset: &'a i32,
