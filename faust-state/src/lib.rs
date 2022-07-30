@@ -6,7 +6,7 @@ const DEFAULT_NAME: &str = "rust_faust";
 
 #[derive(Debug)]
 pub struct DspHandle<T> {
-    dsp: T,
+    dsp: Box<T>,
     dsp_tx: Producer<State>,
     dsp_rx: Consumer<State>,
     name: String,
@@ -17,9 +17,9 @@ where
     T: FaustDsp<T = f32> + 'static,
 {
     pub fn new() -> (Self, StateHandle) {
-        let mut dsp = T::new();
-        let meta = MetaBuilder::from_dsp(&mut dsp);
-        let params = ParamsBuilder::from_dsp(&mut dsp);
+        let mut dsp = Box::new(T::new());
+        let meta = MetaBuilder::from_dsp(dsp.as_mut());
+        let params = ParamsBuilder::from_dsp(dsp.as_mut());
         let name = meta
             .get("name")
             .map_or(DEFAULT_NAME, String::as_str)
