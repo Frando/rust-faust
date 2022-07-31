@@ -270,6 +270,39 @@ impl Node {
             0.
         }
     }
+
+    /// The minimum value for this parameter.
+    ///
+    /// This value is an indication of the DSP and is not enforced.
+    pub fn min(&self) -> f32 {
+        if let Some(props) = &self.props {
+            props.min
+        } else {
+            0.
+        }
+    }
+
+    /// The maximum value for this parameter.
+    ///
+    /// This value is an indication of the DSP and is not enforced.
+    pub fn max(&self) -> f32 {
+        if let Some(props) = &self.props {
+            props.max
+        } else {
+            0.
+        }
+    }
+
+    /// The precision of the slider.
+    ///
+    /// This value is an indication of the DSP and is not enforced.
+    pub fn step(&self) -> f32 {
+        if let Some(props) = &self.props {
+            props.step
+        } else {
+            0.
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
