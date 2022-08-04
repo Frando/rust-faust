@@ -6,4 +6,5 @@ members = [
   "examples/example-jack",
   "examples/example-dbmeter-jack", 
   "examples/example-ui-slint-jack", 
+  "examples/example-mixer-ui-slint-jack", 
 ]
