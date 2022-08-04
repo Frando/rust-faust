@@ -1,0 +1,27 @@
+[package]
+name = "example-mixer-ui-slint"
+version = "0.1.0"
+authors = ["Franz Heinzmann (Frando) <frando@unbiskant.org>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+default = [ "wayland", "x11" ]
+wayland = [ "slint/backend-gl-wayland" ]
+x11 = [ "slint/backend-gl-x11"]
+
+[dependencies]
+faust-types = { path = "../../faust-types" }
+faust-state = { path = "../../faust-state" }
+jack = "0.10.0"
+rtrb = "0.1.3"
+slint = { version = "0.2.5", default-features = false, features = [
+    "std",
+    "backend-gl-all",
+    "compat-0-2-0",
+] }
+
+[build-dependencies]
+faust-build = { path = "../../faust-build" }
+slint-build = "0.2.5"

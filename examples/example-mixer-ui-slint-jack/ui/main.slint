@@ -1,0 +1,169 @@
+export global Logic := {
+  callback roundoff(float, int) -> string;
+  callback dbconvert(float) -> int;
+}
+
+export global Backend := {
+  property<[float]> volumes: [0.0, 0.0, 0.0, 0.0];  
+  property<[float]> gains: [0.0, 0.0, 0.0, 0.0];  
+  property<[float]>  cue_toggles: [0.0, 0.0, 0.0, 0.0];
+  callback send(string, float);
+}
+
+export Slider := Rectangle {
+    property<string> text;
+    property<float> value: 0.0;
+    property<color> indicatorColor: lightgreen;
+    callback changed();
+    
+    height: text.height + padding-top + padding-bottom;
+    width: text.width + padding-left + padding-right;
+    clip: true;
+
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-top: 3px;
+    padding-bottom: 3px;
+
+    border-color: black;
+    border-radius: 3px;
+    border-width: 1px;
+
+    TouchArea {
+    
+        valueIndicator := Rectangle {
+            width: root.width * value;
+            border-width: root.border-width;
+            border-radius: root.border-radius;
+            
+            color: root.indicatorColor;
+        }
+
+        text := Text {
+            x: root.padding-right;
+            y: root.padding-top;
+            text: root.text + ": " + Logic.roundoff(root.value, 2);
+        }
+        borderRectanlge := Rectangle {
+        border-color: root.border-color;
+        border-width: root.border-width;
+        border-radius: root.border-radius;
+        }
+
+        moved => {
+            root.value = min(max(mouse-x / root.width, 0.0), 1.0);
+            changed();
+        }
+
+        clicked => {
+            moved();
+        }
+    }
+}
+
+
+export VUMeter :=  Rectangle {
+    property<float> value: 0;
+    
+    property<length> height_bar: 10px;
+    property<length> width_bar: 10px;
+    property<length> padding_bar: 1px;
+    property<length> border_bar: 1px;
+    property<[color]> bar_colors: [
+        Colors.red,
+        Colors.orange,
+        Colors.orange,
+        Colors.green,
+        Colors.green,
+        Colors.green,
+        Colors.green,
+        Colors.green,
+        Colors.green,
+    ];
+    property<int> level_i: Logic.dbconvert(value);
+    Rectangle {
+        width: width_bar ;
+        height: (height_bar - padding_bar) * (bar_colors.length) + border_bar * 2;
+        background: white;
+        border-width: 1px;
+        border-color: black;
+        VerticalLayout {
+            padding: padding_bar;
+            for color[index] in bar_colors : Rectangle {
+                height: height_bar - padding_bar;
+                width: width_bar - padding_bar * 2 ;
+                background: bar_colors.length - index > level_i ? white : color;
+                border-width: border_bar;
+                border-color: lightgrey;
+            }
+        }
+    }
+}
+
+
+ChannelStrip := Rectangle {
+  property<int> channelNumber: -1;
+  property<float> volume: Backend.volumes[channelNumber];
+  property<float> gain: Backend.gains[channelNumber];
+  property<float> cue_toggle: Backend.cue_toggles[channelNumber];
+  callback send(string, float);
+  height: 55px;
+  width: 100%;
+  Text {
+    y: parent.y;
+    text: "Channel" + channelNumber;
+    font-weight: 400;
+  }
+  Slider {
+    y: parent.y + 20px;
+    value <=> volume;
+    text: "Volume";
+    changed => {
+      Backend.send("volume" + channelNumber, value);
+    }
+  }
+  Slider {
+    y: parent.y + 50px;
+    value <=> gain;
+    text: "Gain";
+    changed => {
+      Backend.send("gain" + channelNumber, value);
+    }
+  }
+  TouchArea {
+    width: text.width;
+    height: text.height;
+    x: 0;
+    y: parent.y + 80px;
+
+
+    text := Text {
+      text: "Cue: " + (cue_toggle == 1.0 ? "On" : "Off");
+    }
+    clicked => {
+      Backend.send("cue_toggle" + channelNumber, cue-toggle == 1.0 ? 0 : 1);
+    }
+  }
+}
+
+UI := Window {
+  width: 100px;
+  height: 500px;
+  title: "Mixer";
+
+  VerticalLayout {
+    ChannelStrip {
+      channelNumber: 0;
+    }
+    ChannelStrip {
+      channelNumber: 1;
+    }
+    ChannelStrip {
+      channelNumber: 2;
+    }
+    ChannelStrip {
+      channelNumber: 3;
+    }
+  }
+
+}
