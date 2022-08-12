@@ -153,11 +153,11 @@ impl StateHandle {
         self.state.state.get(&idx)
     }
 
-    pub fn set_by_path(&mut self, path: &str, value: f32) -> Result<(), &str> {
+    pub fn set_by_path(&mut self, path: &str, value: f32) -> Result<(), String> {
         let idx = if let Some(idx) = self.params_by_path.get(path) {
             Some(*idx)
         } else {
-            return Err("No such path");
+            return Err("No such path".into());
         };
         if let Some(idx) = idx {
             self.set_param(idx, value);
