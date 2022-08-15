@@ -1,6 +1,9 @@
 use faust_types::*;
 use rtrb::{Consumer, Producer, RingBuffer};
-use std::collections::{BTreeMap, HashMap};
+use std::{
+    collections::{BTreeMap, HashMap},
+    ops::RangeInclusive,
+};
 
 const DEFAULT_NAME: &str = "rust_faust";
 
@@ -44,7 +47,7 @@ where
         let mut params_by_path = BTreeMap::new();
         for (idx, node) in params.iter() {
             params_by_path.insert(node.path(), *idx);
-            state.state.insert(*idx, node.init_value());
+            state.state.insert(*idx, node.widget_type().init_value());
         }
 
         let state_handle = StateHandle {
@@ -248,8 +251,7 @@ pub struct Node {
     idx: i32,
     label: String,
     prefix: String,
-    typ: NodeType,
-    props: Option<Props>,
+    typ: WidgetType,
     metadata: Vec<[String; 2]>,
 }
 
@@ -263,34 +265,87 @@ impl Node {
         path
     }
 
+    pub fn widget_type(&self) -> &WidgetType {
+        &self.typ
+    }
+}
+
+/// General types of widgets declared in the DSP
+#[derive(Debug, Clone)]
+pub enum WidgetType {
+    /// Only has metadata
+    /// There should not be any after building the DSP.
+    Unknown,
+    /// Temporary on button.
+    Button,
+    /// Stable on/off button.
+    Toggle,
+    /// Vertical slider
+    VerticalSlider(RangedInput),
+    /// Horizontal slider
+    HorizontalSlider(RangedInput),
+    /// Numeric entry
+    NumEntry(RangedInput),
+    /// Horizontal bargraph
+    HorizontalBarGraph(RangedOutput),
+    /// Vertical bargraph
+    VerticalBargraph(RangedOutput),
+}
+
+impl Default for WidgetType {
+    fn default() -> Self {
+        WidgetType::Unknown
+    }
+}
+
+impl WidgetType {
+    /// Retrieve the init value for this widget
     pub fn init_value(&self) -> f32 {
-        if let Some(props) = &self.props {
-            props.init
-        } else {
-            0.
+        match self {
+            WidgetType::VerticalSlider(input) => input.init,
+            WidgetType::HorizontalSlider(input) => input.init,
+            WidgetType::NumEntry(input) => input.init,
+            // Buttons and checkboxes are off by default.
+            // Passive widgets will need an update from the DSP before having a value
+            _ => 0.0,
         }
     }
 }
 
+/// A ranged input controlled by the user.
 #[derive(Debug, Clone)]
-pub struct Props {
-    min: f32,
-    max: f32,
-    init: f32,
-    step: f32,
+pub struct RangedInput {
+    /// Initial value defined in the DSP
+    pub init: f32,
+    /// Available range defined in the DSP
+    /// This range is declared but not enforced
+    pub range: RangeInclusive<f32>,
+    /// Precision of the value
+    /// This value is declared but not enforced
+    pub step: f32,
 }
 
-#[derive(Debug, Clone)]
-enum NodeType {
-    Value,
-    Button,
-    Toggle,
-    Input,
+impl RangedInput {
+    pub fn new(init: f32, min: f32, max: f32, step: f32) -> Self {
+        Self {
+            init,
+            range: min..=max,
+            step,
+        }
+    }
 }
 
-impl Default for NodeType {
-    fn default() -> Self {
-        NodeType::Value
+/// A ranged output value controlled by the DSP.
+#[derive(Debug, Clone)]
+pub struct RangedOutput {
+    /// Declared range of the widget
+    /// This value is declared but not enforced
+    pub range: RangeInclusive<f32>,
+}
+
+impl RangedOutput {
+    pub fn new(min: f32, max: f32) -> Self {
+        Self { range: min..=max }
     }
 }
 
@@ -327,8 +382,7 @@ impl ParamsBuilder {
         &mut self,
         label: &str,
         idx: ParamIndex,
-        typ: NodeType,
-        props: Option<Props>,
+        typ: WidgetType,
         metadata: Option<Vec<[String; 2]>>,
     ) {
         let prefix = self.prefix[..].join("/").to_string();
@@ -337,9 +391,6 @@ impl ParamsBuilder {
             let node = self.inner.get_mut(&idx).unwrap();
             node.label = label.to_string();
             node.typ = typ;
-            if props.is_some() {
-                node.props = props;
-            }
             if let Some(mut metadata) = metadata {
                 node.metadata.append(metadata.as_mut());
             }
@@ -349,7 +400,6 @@ impl ParamsBuilder {
                 label: label.to_string(),
                 prefix,
                 typ,
-                props,
                 metadata: metadata.unwrap_or_default(),
             };
             self.inner.insert(idx, node);
@@ -373,10 +423,10 @@ impl UI<f32> for ParamsBuilder {
 
     // -- active widgets
     fn add_button(&mut self, label: &str, param: ParamIndex) {
-        self.add_or_update_widget(label, param, NodeType::Button, None, None);
+        self.add_or_update_widget(label, param, WidgetType::Button, None);
     }
     fn add_check_button(&mut self, label: &str, param: ParamIndex) {
-        self.add_or_update_widget(label, param, NodeType::Toggle, None, None);
+        self.add_or_update_widget(label, param, WidgetType::Toggle, None);
     }
     fn add_vertical_slider(
         &mut self,
@@ -387,14 +437,8 @@ impl UI<f32> for ParamsBuilder {
         max: f32,
         step: f32,
     ) {
-        let typ = NodeType::Input;
-        let props = Props {
-            init,
-            min,
-            max,
-            step,
-        };
-        self.add_or_update_widget(label, param, typ, Some(props), None);
+        let typ = WidgetType::VerticalSlider(RangedInput::new(init, min, max, step));
+        self.add_or_update_widget(label, param, typ, None);
     }
     fn add_horizontal_slider(
         &mut self,
@@ -405,14 +449,8 @@ impl UI<f32> for ParamsBuilder {
         max: f32,
         step: f32,
     ) {
-        let typ = NodeType::Input;
-        let props = Props {
-            init,
-            min,
-            max,
-            step,
-        };
-        self.add_or_update_widget(label, param, typ, Some(props), None);
+        let typ = WidgetType::HorizontalSlider(RangedInput::new(init, min, max, step));
+        self.add_or_update_widget(label, param, typ, None);
     }
     fn add_num_entry(
         &mut self,
@@ -423,36 +461,18 @@ impl UI<f32> for ParamsBuilder {
         max: f32,
         step: f32,
     ) {
-        let typ = NodeType::Input;
-        let props = Props {
-            init,
-            min,
-            max,
-            step,
-        };
-        self.add_or_update_widget(label, param, typ, Some(props), None);
+        let typ = WidgetType::NumEntry(RangedInput::new(init, min, max, step));
+        self.add_or_update_widget(label, param, typ, None);
     }
 
     // -- passive widgets
     fn add_horizontal_bargraph(&mut self, label: &str, param: ParamIndex, min: f32, max: f32) {
-        let typ = NodeType::Value;
-        let props = Props {
-            init: 0.,
-            min,
-            max,
-            step: 0.,
-        };
-        self.add_or_update_widget(label, param, typ, Some(props), None);
+        let typ = WidgetType::HorizontalBarGraph(RangedOutput::new(min, max));
+        self.add_or_update_widget(label, param, typ, None);
     }
     fn add_vertical_bargraph(&mut self, label: &str, param: ParamIndex, min: f32, max: f32) {
-        let typ = NodeType::Value;
-        let props = Props {
-            init: 0.,
-            min,
-            max,
-            step: 0.,
-        };
-        self.add_or_update_widget(label, param, typ, Some(props), None);
+        let typ = WidgetType::VerticalBargraph(RangedOutput::new(min, max));
+        self.add_or_update_widget(label, param, typ, None);
     }
 
     // -- metadata declarations
@@ -462,8 +482,7 @@ impl UI<f32> for ParamsBuilder {
                 self.add_or_update_widget(
                     "Unknown",
                     param_index,
-                    NodeType::default(),
-                    None,
+                    WidgetType::default(),
                     Some(vec![[key.to_string(), value.to_string()]]),
                 )
             } else {
