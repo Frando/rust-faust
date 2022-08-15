@@ -276,12 +276,20 @@ pub enum WidgetType {
     /// Only has metadata
     /// There should not be any after building the DSP.
     Unknown,
-    /// Buttons and checkboxes
-    Boolean(BooleanKind),
-    /// Sliders
-    RangedInput(RangedInput),
-    /// Bargraphs
-    RangedOutput(RangedOutput),
+    /// Temporary on button.
+    Button,
+    /// Stable on/off button.
+    Toggle,
+    /// Vertical slider
+    VerticalSlider(RangedInput),
+    /// Horizontal slider
+    HorizontalSlider(RangedInput),
+    /// Numeric entry
+    NumEntry(RangedInput),
+    /// Horizontal bargraph
+    HorizontalBarGraph(RangedOutput),
+    /// Vertical bargraph
+    VerticalBargraph(RangedOutput),
 }
 
 impl Default for WidgetType {
@@ -294,7 +302,9 @@ impl WidgetType {
     /// Retrieve the init value for this widget
     pub fn init_value(&self) -> f32 {
         match self {
-            WidgetType::RangedInput(input) => input.init,
+            WidgetType::VerticalSlider(input) => input.init,
+            WidgetType::HorizontalSlider(input) => input.init,
+            WidgetType::NumEntry(input) => input.init,
             // Buttons and checkboxes are off by default.
             // Passive widgets will need an update from the DSP before having a value
             _ => 0.0,
@@ -302,41 +312,9 @@ impl WidgetType {
     }
 }
 
-/// Widgets controlling a boolean value
-#[derive(Debug, Clone)]
-pub enum BooleanKind {
-    /// Temporary on button.
-    Button,
-
-    /// Stable on/off button.
-    Toggle,
-}
-
-/// Widgets controlling a ranged value
-#[derive(Debug, Clone)]
-pub enum RangedInputKind {
-    /// Vertical slider
-    VerticalSlider,
-    /// Horizontal slider
-    HorizontalSlider,
-    /// Numeric entry
-    NumEntry,
-}
-
-/// Widgets controlling a ranged output value
-#[derive(Debug, Clone)]
-pub enum RangedOutputKind {
-    /// Horizontal bargraph
-    HorizontalBarGraph,
-    /// Vertical bargraph
-    VerticalBargraph,
-}
-
 /// A ranged input controlled by the user.
 #[derive(Debug, Clone)]
 pub struct RangedInput {
-    /// The kind of widget exposing the value.
-    pub kind: RangedInputKind,
     /// Initial value defined in the DSP
     pub init: f32,
     /// Available range defined in the DSP
@@ -348,9 +326,8 @@ pub struct RangedInput {
 }
 
 impl RangedInput {
-    pub fn new(kind: RangedInputKind, init: f32, min: f32, max: f32, step: f32) -> Self {
+    pub fn new(init: f32, min: f32, max: f32, step: f32) -> Self {
         Self {
-            kind,
             init,
             range: min..=max,
             step,
@@ -361,19 +338,14 @@ impl RangedInput {
 /// A ranged output value controlled by the DSP.
 #[derive(Debug, Clone)]
 pub struct RangedOutput {
-    /// The kind of widget exposing the value
-    pub kind: RangedOutputKind,
     /// Declared range of the widget
     /// This value is declared but not enforced
     pub range: RangeInclusive<f32>,
 }
 
 impl RangedOutput {
-    pub fn new(kind: RangedOutputKind, min: f32, max: f32) -> Self {
-        Self {
-            kind,
-            range: min..=max,
-        }
+    pub fn new(min: f32, max: f32) -> Self {
+        Self { range: min..=max }
     }
 }
 
@@ -451,10 +423,10 @@ impl UI<f32> for ParamsBuilder {
 
     // -- active widgets
     fn add_button(&mut self, label: &str, param: ParamIndex) {
-        self.add_or_update_widget(label, param, WidgetType::Boolean(BooleanKind::Button), None);
+        self.add_or_update_widget(label, param, WidgetType::Button, None);
     }
     fn add_check_button(&mut self, label: &str, param: ParamIndex) {
-        self.add_or_update_widget(label, param, WidgetType::Boolean(BooleanKind::Toggle), None);
+        self.add_or_update_widget(label, param, WidgetType::Toggle, None);
     }
     fn add_vertical_slider(
         &mut self,
@@ -465,13 +437,7 @@ impl UI<f32> for ParamsBuilder {
         max: f32,
         step: f32,
     ) {
-        let typ = WidgetType::RangedInput(RangedInput::new(
-            RangedInputKind::VerticalSlider,
-            init,
-            min,
-            max,
-            step,
-        ));
+        let typ = WidgetType::VerticalSlider(RangedInput::new(init, min, max, step));
         self.add_or_update_widget(label, param, typ, None);
     }
     fn add_horizontal_slider(
@@ -483,13 +449,7 @@ impl UI<f32> for ParamsBuilder {
         max: f32,
         step: f32,
     ) {
-        let typ = WidgetType::RangedInput(RangedInput::new(
-            RangedInputKind::HorizontalSlider,
-            init,
-            min,
-            max,
-            step,
-        ));
+        let typ = WidgetType::HorizontalSlider(RangedInput::new(init, min, max, step));
         self.add_or_update_widget(label, param, typ, None);
     }
     fn add_num_entry(
@@ -501,31 +461,17 @@ impl UI<f32> for ParamsBuilder {
         max: f32,
         step: f32,
     ) {
-        let typ = WidgetType::RangedInput(RangedInput::new(
-            RangedInputKind::NumEntry,
-            init,
-            min,
-            max,
-            step,
-        ));
+        let typ = WidgetType::NumEntry(RangedInput::new(init, min, max, step));
         self.add_or_update_widget(label, param, typ, None);
     }
 
     // -- passive widgets
     fn add_horizontal_bargraph(&mut self, label: &str, param: ParamIndex, min: f32, max: f32) {
-        let typ = WidgetType::RangedOutput(RangedOutput::new(
-            RangedOutputKind::HorizontalBarGraph,
-            min,
-            max,
-        ));
+        let typ = WidgetType::HorizontalBarGraph(RangedOutput::new(min, max));
         self.add_or_update_widget(label, param, typ, None);
     }
     fn add_vertical_bargraph(&mut self, label: &str, param: ParamIndex, min: f32, max: f32) {
-        let typ = WidgetType::RangedOutput(RangedOutput::new(
-            RangedOutputKind::VerticalBargraph,
-            min,
-            max,
-        ));
+        let typ = WidgetType::VerticalBargraph(RangedOutput::new(min, max));
         self.add_or_update_widget(label, param, typ, None);
     }
 
