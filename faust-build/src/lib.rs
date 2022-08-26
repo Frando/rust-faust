@@ -55,7 +55,6 @@ pub fn build_dsp(dsp_file: &str) {
     {}
 }}
 pub use dsp::mydsp as {};
-pub use dsp::enable_flush_denormals_to_zero; 
 "#,
         dsp_code, struct_name
     );
