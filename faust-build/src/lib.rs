@@ -6,11 +6,17 @@ use std::{env, path::PathBuf};
 use tempfile::NamedTempFile;
 
 pub fn build_dsp(dsp_file: &str) {
+    let out_dir = env::var_os("OUT_DIR").unwrap();
+    let dest_path = Path::new(&out_dir).join("dsp.rs");
+    build_dsp_to_destination(dsp_file, dest_path.to_str().unwrap());
+}
+
+pub fn build_dsp_to_destination(dsp_file: &str, dest_path: &str) {
     eprintln!("cargo:rerun-if-changed={}", dsp_file);
     let dsp_path = PathBuf::from(dsp_file);
     let dsp_name = dsp_path.file_stem().unwrap();
-    let out_dir = env::var_os("OUT_DIR").unwrap();
-    let dest_path = Path::new(&out_dir).join("dsp.rs");
+
+    let dest_path = PathBuf::from(dest_path);
 
     let template_code = include_str!("../faust-template.rs");
     let template_file = NamedTempFile::new().expect("failed creating temporary file");
