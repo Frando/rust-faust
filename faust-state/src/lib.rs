@@ -114,33 +114,38 @@ where
 
     // Gets the fp status register.
     // Needed for flushing denormals
+    #[allow(unreachable_code)]
     fn get_fp_status_register(&self) -> Option<u32> {
+        #[cfg(any(target_arch = "arm", target_arch = "aarch64"))]
         unsafe {
-            if cfg!(any(target_arch = "arm", target_arch = "aarch64")) {
-                use std::arch::asm;
-                let fspr: u32;
-                asm!("msr fpcr, {0:r}", out(reg) fspr);
-                Some(fspr)
-            } else if cfg!(target_feature = "sse") {
-                use std::arch::x86_64::*;
-                Some(_mm_getcsr())
-            } else {
-                None
-            }
+            use std::arch::asm;
+            let fspr: u32;
+            asm!("msr fpcr, {0:r}", out(reg) fspr);
+            return Some(fspr);
         }
+        #[cfg(target_feature = "sse")]
+        unsafe {
+            use std::arch::x86_64::*;
+            return Some(_mm_getcsr());
+        }
+        None
     }
 
     // Sets the fp status register.
     // Needed for flushing denormals
+    #[allow(unreachable_code)]
     fn set_fp_status_register(&self, fspr: u32) {
+        #[cfg(any(target_arch = "arm", target_arch = "aarch64"))]
         unsafe {
-            if cfg!(any(target_arch = "arm", target_arch = "aarch64")) {
-                use std::arch::asm;
-                asm!("mrs {0:r}, fpcr", in(reg) fspr);
-            } else if cfg!(target_feature = "sse") {
-                use std::arch::x86_64::*;
-                _mm_setcsr(fspr)
-            }
+            use std::arch::asm;
+            asm!("mrs {0:r}, fpcr", in(reg) fspr);
+            return;
+        }
+        #[cfg(target_feature = "sse")]
+        unsafe {
+            use std::arch::x86_64::*;
+            _mm_setcsr(fspr);
+            return;
         }
     }
 
