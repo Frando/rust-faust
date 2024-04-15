@@ -58,7 +58,9 @@ impl FaustBuilder {
             .arg("-a")
             .arg(template_file.path())
             .arg("-lang")
-            .arg("rust");
+            .arg("rust")
+            .arg("-t")
+            .arg("0");
 
         if self.use_double {
             output.arg("-double");
