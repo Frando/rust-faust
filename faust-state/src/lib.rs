@@ -1,12 +1,15 @@
 use faust_types::*;
 use rtrb::{Consumer, Producer, RingBuffer};
-use std::collections::{BTreeMap, HashMap};
+use std::{
+    collections::{BTreeMap, HashMap},
+    ops::RangeInclusive,
+};
 
 const DEFAULT_NAME: &str = "rust_faust";
 
 #[derive(Debug)]
 pub struct DspHandle<T> {
-    dsp: T,
+    dsp: Box<T>,
     dsp_tx: Producer<State>,
     dsp_rx: Consumer<State>,
     name: String,
@@ -17,9 +20,13 @@ where
     T: FaustDsp<T = f32> + 'static,
 {
     pub fn new() -> (Self, StateHandle) {
-        let mut dsp = T::new();
-        let meta = MetaBuilder::from_dsp(&mut dsp);
-        let params = ParamsBuilder::from_dsp(&mut dsp);
+        let dsp = Box::new(T::new());
+        Self::from_dsp(dsp)
+    }
+
+    pub fn from_dsp(mut dsp: Box<T>) -> (Self, StateHandle) {
+        let meta = MetaBuilder::from_dsp(dsp.as_mut());
+        let params = ParamsBuilder::from_dsp(dsp.as_mut());
         let name = meta
             .get("name")
             .map_or(DEFAULT_NAME, String::as_str)
@@ -44,7 +51,7 @@ where
         let mut params_by_path = BTreeMap::new();
         for (idx, node) in params.iter() {
             params_by_path.insert(node.path(), *idx);
-            state.state.insert(*idx, node.init_value());
+            state.state.insert(*idx, node.widget_type().init_value());
         }
 
         let state_handle = StateHandle {
@@ -72,12 +79,73 @@ where
             None
         };
 
+        // Potentially improves the performance of SIMD floating-point math
+        // by flushing denormals/underflow to zero.
+        // See: https://gist.github.com/GabrielMajeri/545042ee4f956d5b2141105eb6a505a9
+        // See: https://github.com/grame-cncm/faust/blob/master-dev/architecture/faust/dsp/dsp.h#L236
+        let mask = if cfg!(any(target_arch = "arm", target_arch = "aarch64")) {
+            1 << 24 // FZ
+        } else if cfg!(any(target_feature = "sse2")) {
+            0x8040
+        } else if cfg!(any(target_feature = "sse")) {
+            0x8000
+        } else {
+            0x0000
+        };
+        // Set fp status register to masked value
+        let fpsr = self.get_fp_status_register();
+        if let Some(fpsr) = fpsr {
+            self.set_fp_status_register(fpsr | mask);
+        }
+
         self.compute(count, inputs, outputs);
+
+        // Reset fp status register to old value
+        if let Some(fpsr) = fpsr {
+            self.set_fp_status_register(fpsr);
+        }
 
         if !self.dsp_tx.is_full() && state.is_some() {
             let mut state = state.take().unwrap();
             self.update_state_from_params(&mut state);
             let _ = self.dsp_tx.push(state);
+        }
+    }
+
+    // Gets the fp status register.
+    // Needed for flushing denormals
+    #[allow(unreachable_code)]
+    fn get_fp_status_register(&self) -> Option<u32> {
+        #[cfg(any(target_arch = "arm", target_arch = "aarch64"))]
+        unsafe {
+            use std::arch::asm;
+            let fspr: u32;
+            asm!("msr fpcr, {0:r}", out(reg) fspr);
+            return Some(fspr);
+        }
+        #[cfg(target_feature = "sse")]
+        unsafe {
+            use std::arch::x86_64::*;
+            return Some(_mm_getcsr());
+        }
+        None
+    }
+
+    // Sets the fp status register.
+    // Needed for flushing denormals
+    #[allow(unreachable_code)]
+    fn set_fp_status_register(&self, fspr: u32) {
+        #[cfg(any(target_arch = "arm", target_arch = "aarch64"))]
+        unsafe {
+            use std::arch::asm;
+            asm!("mrs {0:r}, fpcr", in(reg) fspr);
+            return;
+        }
+        #[cfg(target_feature = "sse")]
+        unsafe {
+            use std::arch::x86_64::*;
+            _mm_setcsr(fspr);
+            return;
         }
     }
 
@@ -153,15 +221,16 @@ impl StateHandle {
         self.state.state.get(&idx)
     }
 
-    pub fn set_by_path(&mut self, path: &str, value: f32) {
+    pub fn set_by_path(&mut self, path: &str, value: f32) -> Result<(), String> {
         let idx = if let Some(idx) = self.params_by_path.get(path) {
             Some(*idx)
         } else {
-            None
+            return Err("No such path".into());
         };
         if let Some(idx) = idx {
             self.set_param(idx, value);
         }
+        Ok(())
     }
 
     pub fn get_by_path(&self, path: &str) -> Option<&f32> {
@@ -247,8 +316,7 @@ pub struct Node {
     idx: i32,
     label: String,
     prefix: String,
-    typ: NodeType,
-    props: Option<Props>,
+    typ: WidgetType,
     metadata: Vec<[String; 2]>,
 }
 
@@ -262,34 +330,87 @@ impl Node {
         path
     }
 
+    pub fn widget_type(&self) -> &WidgetType {
+        &self.typ
+    }
+}
+
+/// General types of widgets declared in the DSP
+#[derive(Debug, Clone)]
+pub enum WidgetType {
+    /// Only has metadata
+    /// There should not be any after building the DSP.
+    Unknown,
+    /// Temporary on button.
+    Button,
+    /// Stable on/off button.
+    Toggle,
+    /// Vertical slider
+    VerticalSlider(RangedInput),
+    /// Horizontal slider
+    HorizontalSlider(RangedInput),
+    /// Numeric entry
+    NumEntry(RangedInput),
+    /// Horizontal bargraph
+    HorizontalBarGraph(RangedOutput),
+    /// Vertical bargraph
+    VerticalBargraph(RangedOutput),
+}
+
+impl Default for WidgetType {
+    fn default() -> Self {
+        WidgetType::Unknown
+    }
+}
+
+impl WidgetType {
+    /// Retrieve the init value for this widget
     pub fn init_value(&self) -> f32 {
-        if let Some(props) = &self.props {
-            props.init
-        } else {
-            0.
+        match self {
+            WidgetType::VerticalSlider(input) => input.init,
+            WidgetType::HorizontalSlider(input) => input.init,
+            WidgetType::NumEntry(input) => input.init,
+            // Buttons and checkboxes are off by default.
+            // Passive widgets will need an update from the DSP before having a value
+            _ => 0.0,
         }
     }
 }
 
+/// A ranged input controlled by the user.
 #[derive(Debug, Clone)]
-pub struct Props {
-    min: f32,
-    max: f32,
-    init: f32,
-    step: f32,
+pub struct RangedInput {
+    /// Initial value defined in the DSP
+    pub init: f32,
+    /// Available range defined in the DSP
+    /// This range is declared but not enforced
+    pub range: RangeInclusive<f32>,
+    /// Precision of the value
+    /// This value is declared but not enforced
+    pub step: f32,
 }
 
-#[derive(Debug, Clone)]
-enum NodeType {
-    Value,
-    Button,
-    Toggle,
-    Input,
+impl RangedInput {
+    pub fn new(init: f32, min: f32, max: f32, step: f32) -> Self {
+        Self {
+            init,
+            range: min..=max,
+            step,
+        }
+    }
 }
 
-impl Default for NodeType {
-    fn default() -> Self {
-        NodeType::Value
+/// A ranged output value controlled by the DSP.
+#[derive(Debug, Clone)]
+pub struct RangedOutput {
+    /// Declared range of the widget
+    /// This value is declared but not enforced
+    pub range: RangeInclusive<f32>,
+}
+
+impl RangedOutput {
+    pub fn new(min: f32, max: f32) -> Self {
+        Self { range: min..=max }
     }
 }
 
@@ -326,8 +447,7 @@ impl ParamsBuilder {
         &mut self,
         label: &str,
         idx: ParamIndex,
-        typ: NodeType,
-        props: Option<Props>,
+        typ: WidgetType,
         metadata: Option<Vec<[String; 2]>>,
     ) {
         let prefix = self.prefix[..].join("/").to_string();
@@ -336,9 +456,6 @@ impl ParamsBuilder {
             let node = self.inner.get_mut(&idx).unwrap();
             node.label = label.to_string();
             node.typ = typ;
-            if props.is_some() {
-                node.props = props;
-            }
             if let Some(mut metadata) = metadata {
                 node.metadata.append(metadata.as_mut());
             }
@@ -348,7 +465,6 @@ impl ParamsBuilder {
                 label: label.to_string(),
                 prefix,
                 typ,
-                props,
                 metadata: metadata.unwrap_or_default(),
             };
             self.inner.insert(idx, node);
@@ -372,10 +488,10 @@ impl UI<f32> for ParamsBuilder {
 
     // -- active widgets
     fn add_button(&mut self, label: &str, param: ParamIndex) {
-        self.add_or_update_widget(label, param, NodeType::Button, None, None);
+        self.add_or_update_widget(label, param, WidgetType::Button, None);
     }
     fn add_check_button(&mut self, label: &str, param: ParamIndex) {
-        self.add_or_update_widget(label, param, NodeType::Toggle, None, None);
+        self.add_or_update_widget(label, param, WidgetType::Toggle, None);
     }
     fn add_vertical_slider(
         &mut self,
@@ -386,14 +502,8 @@ impl UI<f32> for ParamsBuilder {
         max: f32,
         step: f32,
     ) {
-        let typ = NodeType::Input;
-        let props = Props {
-            init,
-            min,
-            max,
-            step,
-        };
-        self.add_or_update_widget(label, param, typ, Some(props), None);
+        let typ = WidgetType::VerticalSlider(RangedInput::new(init, min, max, step));
+        self.add_or_update_widget(label, param, typ, None);
     }
     fn add_horizontal_slider(
         &mut self,
@@ -404,14 +514,8 @@ impl UI<f32> for ParamsBuilder {
         max: f32,
         step: f32,
     ) {
-        let typ = NodeType::Input;
-        let props = Props {
-            init,
-            min,
-            max,
-            step,
-        };
-        self.add_or_update_widget(label, param, typ, Some(props), None);
+        let typ = WidgetType::HorizontalSlider(RangedInput::new(init, min, max, step));
+        self.add_or_update_widget(label, param, typ, None);
     }
     fn add_num_entry(
         &mut self,
@@ -422,36 +526,18 @@ impl UI<f32> for ParamsBuilder {
         max: f32,
         step: f32,
     ) {
-        let typ = NodeType::Input;
-        let props = Props {
-            init,
-            min,
-            max,
-            step,
-        };
-        self.add_or_update_widget(label, param, typ, Some(props), None);
+        let typ = WidgetType::NumEntry(RangedInput::new(init, min, max, step));
+        self.add_or_update_widget(label, param, typ, None);
     }
 
     // -- passive widgets
     fn add_horizontal_bargraph(&mut self, label: &str, param: ParamIndex, min: f32, max: f32) {
-        let typ = NodeType::Value;
-        let props = Props {
-            init: 0.,
-            min,
-            max,
-            step: 0.,
-        };
-        self.add_or_update_widget(label, param, typ, Some(props), None);
+        let typ = WidgetType::HorizontalBarGraph(RangedOutput::new(min, max));
+        self.add_or_update_widget(label, param, typ, None);
     }
     fn add_vertical_bargraph(&mut self, label: &str, param: ParamIndex, min: f32, max: f32) {
-        let typ = NodeType::Value;
-        let props = Props {
-            init: 0.,
-            min,
-            max,
-            step: 0.,
-        };
-        self.add_or_update_widget(label, param, typ, Some(props), None);
+        let typ = WidgetType::VerticalBargraph(RangedOutput::new(min, max));
+        self.add_or_update_widget(label, param, typ, None);
     }
 
     // -- metadata declarations
@@ -461,8 +547,7 @@ impl UI<f32> for ParamsBuilder {
                 self.add_or_update_widget(
                     "Unknown",
                     param_index,
-                    NodeType::default(),
-                    None,
+                    WidgetType::default(),
                     Some(vec![[key.to_string(), value.to_string()]]),
                 )
             } else {
