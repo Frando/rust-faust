@@ -23,6 +23,7 @@ pub struct FaustBuilder {
     /// Name for the DSP struct. If None, we use CamelCased file name.
     struct_name: Option<String>,
     use_double: bool,
+    faust_args: Vec<String>,
 }
 
 impl Default for FaustBuilder {
@@ -33,6 +34,7 @@ impl Default for FaustBuilder {
             struct_name: None,
             module_name: "dsp".into(),
             use_double: false,
+            faust_args: vec![],
         }
     }
 }
@@ -57,6 +59,12 @@ impl FaustBuilder {
 
     pub fn set_use_double(mut self, use_double: bool) -> Self {
         self.use_double = use_double;
+        self
+    }
+
+    /// Add additionals args to the faust build command
+    pub fn faust_arg(mut self, arg: String) -> Self {
+        self.faust_args.push(arg);
         self
     }
 
@@ -102,6 +110,11 @@ impl FaustBuilder {
         if self.use_double {
             output.arg("-double");
         }
+
+        for arg in self.faust_args {
+            output.arg(arg);
+        }
+
         output.arg(&dsp_file).arg("-o").arg(target_file.path());
 
         let output = output.output().expect("Failed to execute command");
