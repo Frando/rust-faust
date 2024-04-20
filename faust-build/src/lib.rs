@@ -15,11 +15,28 @@ pub fn build_dsp_to_destination(dsp_file: &str, dest_path: &str) {
     FaustBuilder::new(dsp_file, dest_path).build()
 }
 
-#[derive(Default)]
 pub struct FaustBuilder {
     in_file: String,
     out_file: String,
+    /// Module name the dsp code will be encapsulated in. By default is "dsp".
+    module_name: String,
+    /// Name for the DSP struct. If None, we use CamelCased file name.
+    struct_name: Option<String>,
     use_double: bool,
+    faust_args: Vec<String>,
+}
+
+impl Default for FaustBuilder {
+    fn default() -> Self {
+        Self {
+            in_file: "".into(),
+            out_file: "".into(),
+            struct_name: None,
+            module_name: "dsp".into(),
+            use_double: false,
+            faust_args: vec![],
+        }
+    }
 }
 
 impl FaustBuilder {
@@ -31,8 +48,23 @@ impl FaustBuilder {
         }
     }
 
+    pub fn set_struct_name(mut self, struct_name: Option<String>) -> Self {
+        self.struct_name = struct_name;
+        self
+    }
+    pub fn set_module_name(mut self, module_name: String) -> Self {
+        self.module_name = module_name;
+        self
+    }
+
     pub fn set_use_double(mut self, use_double: bool) -> Self {
         self.use_double = use_double;
+        self
+    }
+
+    /// Add additionals args to the faust build command
+    pub fn faust_arg(mut self, arg: String) -> Self {
+        self.faust_args.push(arg);
         self
     }
 
@@ -40,8 +72,6 @@ impl FaustBuilder {
         let dsp_file = self.in_file;
         let dest_path = self.out_file;
         eprintln!("cargo:rerun-if-changed={}", dsp_file);
-        let dsp_path = PathBuf::from(&dsp_file);
-        let dsp_name = dsp_path.file_stem().unwrap();
 
         let dest_path = PathBuf::from(dest_path);
 
@@ -54,17 +84,37 @@ impl FaustBuilder {
         // faust -a $ARCHFILE -lang rust "$SRCDIR/$f" -o "$SRCDIR/$dspName/src/main.rs"
         let mut output = Command::new("faust");
 
+        let struct_name = match &self.struct_name {
+            Some(struct_name) => struct_name.clone(),
+            None => {
+                let dsp_path = PathBuf::from(&dsp_file);
+                dsp_path
+                    .file_stem()
+                    .unwrap()
+                    .to_string_lossy()
+                    .to_string()
+                    .to_camel_case()
+            }
+        };
+
         output
             .arg("-a")
             .arg(template_file.path())
             .arg("-lang")
             .arg("rust")
             .arg("-t")
-            .arg("0");
+            .arg("0")
+            .arg("-cn")
+            .arg(&struct_name);
 
         if self.use_double {
             output.arg("-double");
         }
+
+        for arg in self.faust_args {
+            output.arg(arg);
+        }
+
         output.arg(&dsp_file).arg("-o").arg(target_file.path());
 
         let output = output.output().expect("Failed to execute command");
@@ -81,30 +131,10 @@ impl FaustBuilder {
 
         let dsp_code = fs::read(target_file).unwrap();
         let dsp_code = String::from_utf8(dsp_code).unwrap();
+        let dsp_code = dsp_code.replace("<<moduleName>>", &self.module_name);
+        let dsp_code = dsp_code.replace("<<structName>>", &struct_name);
 
-        let dsp_code = dsp_code.replace(
-            "pub struct mydsp",
-            "#[derive(Debug,Clone)]\npub struct mydsp",
-        );
-
-        let struct_name = dsp_name.to_str().unwrap().to_camel_case();
-
-        let module_code = format!(
-            r#"mod dsp {{
-    {}
-}}
-pub use dsp::mydsp as {};
-"#,
-            dsp_code, struct_name
-        );
-
-        fs::write(&dest_path, module_code).expect("failed to write to destination path");
-
-        // TODO: rustfmt hangs on the created file.
-        // Command::new("rustfmt")
-        //     .arg(&dest_path)
-        //     .output()
-        //     .expect("failed to run rustfmt");
+        fs::write(&dest_path, dsp_code).expect("failed to write to destination path");
 
         eprintln!("Wrote module:\n{}", dest_path.to_str().unwrap());
     }
