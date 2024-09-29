@@ -9,6 +9,7 @@ edition = "2018"
 [dependencies]
 faust-types = { path = "../../faust-types" }
 faust-state = { path = "../../faust-state" }
+jack-utils = { path = "../jack-utils" }
 jack = "0.7.0"
 smallvec = "1.6.1"
 rtrb = "0.1.3"
