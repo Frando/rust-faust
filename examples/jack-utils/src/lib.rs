@@ -4,7 +4,7 @@ use jack::AudioIn;
 use jack::*;
 use std::{io, slice};
 
-pub fn run_dsp<T>(mut dsp: DspHandle<T>)
+pub fn run_dsp_as_jack_client<T>(mut dsp: DspHandle<T>)
 where
     T: FaustDsp<T = f32> + 'static + Send,
 {

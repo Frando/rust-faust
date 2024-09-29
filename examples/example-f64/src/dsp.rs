@@ -4,7 +4,7 @@ license: "BSD"
 name: "volumecontrol"
 version: "1.0"
 Code generated with Faust 2.74.6 (https://faust.grame.fr)
-Compilation options: -a /tmp/.tmpqdjQYq -lang rust -ct 1 -cn Volume -es 1 -mcd 16 -mdd 1024 -mdy 33 -double -ftz 0
+Compilation options: -a /tmp/.tmpGIYU35 -lang rust -ct 1 -cn Volume -es 1 -mcd 16 -mdd 1024 -mdy 33 -double -ftz 0
 ------------------------------------------------------------ */
 mod dsp {
     #![allow(clippy::all)]
@@ -71,7 +71,7 @@ impl FaustDsp for Volume {
 		m.declare("basics.lib/name", r"Faust Basic Element Library");
 		m.declare("basics.lib/tabulateNd", r"Copyright (C) 2023 Bart Brouns <bart@magnetophon.nl>");
 		m.declare("basics.lib/version", r"1.18.0");
-		m.declare("compile_options", r"-a /tmp/.tmpqdjQYq -lang rust -ct 1 -cn Volume -es 1 -mcd 16 -mdd 1024 -mdy 33 -double -ftz 0");
+		m.declare("compile_options", r"-a /tmp/.tmpGIYU35 -lang rust -ct 1 -cn Volume -es 1 -mcd 16 -mdd 1024 -mdy 33 -double -ftz 0");
 		m.declare("filename", r"volume.dsp");
 		m.declare("license", r"BSD");
 		m.declare("maths.lib/author", r"GRAME");

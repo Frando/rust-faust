@@ -1,7 +1,7 @@
 use std::{thread, time::Duration};
 
 use faust_state::DspHandle;
-use jack_utils::run_dsp;
+use jack_utils::run_dsp_as_jack_client;
 
 mod faust {
     include!(concat!(env!("OUT_DIR"), "/dsp.rs"));
@@ -24,5 +24,5 @@ fn main() {
     });
 
     // Run the DSP as JACK client.
-    run_dsp(dsp);
+    run_dsp_as_jack_client(dsp);
 }
