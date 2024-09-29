@@ -1,8 +1,8 @@
 use std::{thread, time::Duration};
 
 use faust_state::DspHandle;
+use jack_utils::run_dsp;
 
-mod jack;
 mod faust {
     include!(concat!(env!("OUT_DIR"), "/dsp.rs"));
 }
@@ -28,11 +28,11 @@ fn main() {
         if volume > 4. {
             volume = -70.
         }
-        state.set_by_path("volume", volume);
+        let _ = state.set_by_path("volume", volume);
         state.send();
         thread::sleep(Duration::from_millis(200));
     });
 
     // Run the DSP as JACK client.
-    jack::run_dsp(dsp);
+    run_dsp(dsp);
 }
