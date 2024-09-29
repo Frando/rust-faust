@@ -1,9 +1,11 @@
 [workspace]
 members = [
+  "faust-macro", 
   "faust-build", 
   "faust-types", 
   "faust-state",
   "examples/example-jack",
+  "examples/example-jack-macro",
   "examples/example-dbmeter-jack", 
   "examples/example-f64", 
 ]
