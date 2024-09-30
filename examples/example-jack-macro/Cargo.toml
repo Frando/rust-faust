@@ -1,5 +1,5 @@
 [package]
-name = "example"
+name = "example-jack-macro"
 version = "0.1.0"
 authors = ["Franz Heinzmann (Frando) <frando@unbiskant.org>"]
 edition = "2018"
@@ -7,9 +7,11 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+faust-macro = { path = "../../faust-macro" }
 faust-types = { path = "../../faust-types" }
 faust-state = { path = "../../faust-state" }
 jack-utils = { path = "../jack-utils" }
+
 jack = "0.7.0"
 rtrb = "0.1.3"
 

@@ -1,30 +1,44 @@
-mod dsp {
-    /* ------------------------------------------------------------
+/* ------------------------------------------------------------
 author: "Franz Heinzmann"
 license: "BSD"
 name: "volumecontrol"
 version: "1.0"
-Code generated with Faust 2.70.3 (https://faust.grame.fr)
-Compilation options: -a /tmp/.tmp7BJYzb -lang rust -ct 1 -es 1 -mcd 16 -mdd 1024 -mdy 33 -double -ftz 0
+Code generated with Faust 2.74.6 (https://faust.grame.fr)
+Compilation options: -a /tmp/.tmpGIYU35 -lang rust -ct 1 -cn Volume -es 1 -mcd 16 -mdd 1024 -mdy 33 -double -ftz 0
 ------------------------------------------------------------ */
-#![allow(clippy::all)]
-#![allow(unused_parens)]
-#![allow(non_snake_case)]
-#![allow(non_camel_case_types)]
-#![allow(dead_code)]
-#![allow(unused_variables)]
-#![allow(unused_mut)]
-#![allow(non_upper_case_globals)]
+mod dsp {
+    #![allow(clippy::all)]
+    #![allow(unused_parens)]
+    #![allow(non_snake_case)]
+    #![allow(non_camel_case_types)]
+    #![allow(dead_code)]
+    #![allow(unused_variables)]
+    #![allow(unused_mut)]
+    #![allow(non_upper_case_globals)]
+    
+    use faust_types::*;
 
-use faust_types::*;
-
-
+mod ffi {
+	use std::os::raw::{c_double};
+	// Conditionally compile the link attribute only on non-Windows platforms
+	#[cfg_attr(not(target_os="windows"), link(name="m"))]
+	extern {
+		pub fn remainder(from: c_double, to: c_double) -> c_double;
+		pub fn rint(val: c_double) -> c_double;
+	}
+}
+fn remainder_f64(from: f64, to: f64) -> f64 {
+	unsafe { ffi::remainder(from, to) }
+}
+fn rint_f64(val: f64) -> f64 {
+	unsafe { ffi::rint(val) }
+}
 
 #[cfg_attr(feature = "default-boxed", derive(default_boxed::DefaultBoxed))]
 #[repr(C)]
-#[derive(Debug,Clone)]
-pub struct mydsp {
+pub struct Volume {
 	fSampleRate: i32,
+	fConst0: F64,
 	fConst1: F64,
 	fConst2: F64,
 	fVslider0: F64,
@@ -35,12 +49,13 @@ pub struct mydsp {
 	fConst4: F64,
 }
 
-impl FaustDsp for mydsp {
+impl FaustDsp for Volume {
 	type T = F64;
 		
-	fn new() -> mydsp { 
-		mydsp {
+	fn new() -> Volume { 
+		Volume {
 			fSampleRate: 0,
+			fConst0: 0.0,
 			fConst1: 0.0,
 			fConst2: 0.0,
 			fVslider0: 0.0,
@@ -55,15 +70,15 @@ impl FaustDsp for mydsp {
 		m.declare("author", r"Franz Heinzmann");
 		m.declare("basics.lib/name", r"Faust Basic Element Library");
 		m.declare("basics.lib/tabulateNd", r"Copyright (C) 2023 Bart Brouns <bart@magnetophon.nl>");
-		m.declare("basics.lib/version", r"1.12.0");
-		m.declare("compile_options", r"-a /tmp/.tmp7BJYzb -lang rust -ct 1 -es 1 -mcd 16 -mdd 1024 -mdy 33 -double -ftz 0");
+		m.declare("basics.lib/version", r"1.18.0");
+		m.declare("compile_options", r"-a /tmp/.tmpGIYU35 -lang rust -ct 1 -cn Volume -es 1 -mcd 16 -mdd 1024 -mdy 33 -double -ftz 0");
 		m.declare("filename", r"volume.dsp");
 		m.declare("license", r"BSD");
 		m.declare("maths.lib/author", r"GRAME");
 		m.declare("maths.lib/copyright", r"GRAME");
 		m.declare("maths.lib/license", r"LGPL with exception");
 		m.declare("maths.lib/name", r"Faust Math Library");
-		m.declare("maths.lib/version", r"2.7.0");
+		m.declare("maths.lib/version", r"2.8.0");
 		m.declare("name", r"volumecontrol");
 		m.declare("options", r"[osc:on]");
 		m.declare("platform.lib/name", r"Generic Platform Library");
@@ -98,10 +113,10 @@ impl FaustDsp for mydsp {
 	}
 	fn instance_constants(&mut self, sample_rate: i32) {
 		self.fSampleRate = sample_rate;
-		let mut fConst0: F64 = F64::min(1.92e+05, F64::max(1.0, (self.fSampleRate) as F64));
-		self.fConst1 = 44.1 / fConst0;
+		self.fConst0 = F64::min(1.92e+05, F64::max(1.0, (self.fSampleRate) as F64));
+		self.fConst1 = 44.1 / self.fConst0;
 		self.fConst2 = 1.0 - self.fConst1;
-		self.fConst3 = 1.0 / fConst0;
+		self.fConst3 = 1.0 / self.fConst0;
 		self.fConst4 = (0) as F64;
 	}
 	fn instance_init(&mut self, sample_rate: i32) {
@@ -110,7 +125,7 @@ impl FaustDsp for mydsp {
 		self.instance_clear();
 	}
 	fn init(&mut self, sample_rate: i32) {
-		mydsp::class_init(sample_rate);
+		Volume::class_init(sample_rate);
 		self.instance_init(sample_rate);
 	}
 	
@@ -176,6 +191,6 @@ impl FaustDsp for mydsp {
 
 }
 
-
 }
-pub use dsp::mydsp as Volume;
+
+pub use dsp::Volume;

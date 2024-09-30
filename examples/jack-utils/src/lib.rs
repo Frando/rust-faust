@@ -4,7 +4,7 @@ use jack::AudioIn;
 use jack::*;
 use std::{io, slice};
 
-pub fn run_dsp<T>(mut dsp: DspHandle<T>)
+pub fn run_dsp_as_jack_client<T>(mut dsp: DspHandle<T>)
 where
     T: FaustDsp<T = f32> + 'static + Send,
 {
@@ -13,8 +13,7 @@ where
     let num_outputs = dsp.num_inputs();
 
     // Create JACK client
-    let (client, in_ports, mut out_ports) =
-        create_jack_client(dsp.name(), num_inputs as usize, num_outputs as usize);
+    let (client, in_ports, mut out_ports) = create_jack_client(dsp.name(), num_inputs, num_outputs);
 
     // Init DSP with a given sample rate
     let sample_rate = client.sample_rate();
@@ -45,7 +44,7 @@ where
         // Copy audio input for all ports from jack to the faust input buffer
         for index_port in 0..num_inputs {
             let port = in_ports[index_port].as_slice(ps);
-            inputs[index_port][0..len as usize].copy_from_slice(&port);
+            inputs[index_port][0..len as usize].copy_from_slice(port);
         }
 
         // Call the update_and_compute handler on the Faust DSP. This first processes param changes
@@ -84,13 +83,13 @@ fn create_jack_client(
 
     for i in 0..num_inputs {
         let port = client
-            .register_port(&format!("in{}", i), jack::AudioIn::default())
+            .register_port(&format!("in{}", i), jack::AudioIn)
             .unwrap();
         in_ports.push(port);
     }
     for i in 0..num_outputs {
         let port = client
-            .register_port(&format!("out{}", i), jack::AudioOut::default())
+            .register_port(&format!("out{}", i), jack::AudioOut)
             .unwrap();
         out_ports.push(port);
     }
