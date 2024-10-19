@@ -16,6 +16,7 @@ pub fn build_dsp_to_destination(dsp_file: &str, dest_path: &str) {
 }
 
 pub struct FaustBuilder {
+    faust_path: Option<String>,
     in_file: String,
     out_file: String,
     /// Module name the dsp code will be encapsulated in. By default is "dsp".
@@ -29,6 +30,7 @@ pub struct FaustBuilder {
 impl Default for FaustBuilder {
     fn default() -> Self {
         Self {
+            faust_path: None,
             in_file: "".into(),
             out_file: "".into(),
             struct_name: None,
@@ -48,12 +50,12 @@ impl FaustBuilder {
         }
     }
 
-    pub fn set_struct_name(mut self, struct_name: Option<String>) -> Self {
-        self.struct_name = struct_name;
+    pub fn set_struct_name(mut self, struct_name: &str) -> Self {
+        self.struct_name = Some(struct_name.to_string());
         self
     }
-    pub fn set_module_name(mut self, module_name: String) -> Self {
-        self.module_name = module_name;
+    pub fn set_module_name(mut self, module_name: &str) -> Self {
+        self.module_name = module_name.to_string();
         self
     }
 
@@ -62,9 +64,14 @@ impl FaustBuilder {
         self
     }
 
+    pub fn set_faust_path(mut self, faust_path: &str) -> Self {
+        self.faust_path = Some(faust_path.to_string());
+        self
+    }
+
     /// Add additionals args to the faust build command
-    pub fn faust_arg(mut self, arg: String) -> Self {
-        self.faust_args.push(arg);
+    pub fn faust_arg(mut self, arg: &str) -> Self {
+        self.faust_args.push(arg.to_string());
         self
     }
 
@@ -82,7 +89,8 @@ impl FaustBuilder {
         fs::write(template_file.path(), template_code).expect("failed writing temporary file");
 
         // faust -a $ARCHFILE -lang rust "$SRCDIR/$f" -o "$SRCDIR/$dspName/src/main.rs"
-        let mut output = Command::new("faust");
+        let faust = self.faust_path.unwrap_or("faust".to_owned());
+        let mut output = Command::new(faust);
 
         let struct_name = match &self.struct_name {
             Some(struct_name) => struct_name.clone(),
