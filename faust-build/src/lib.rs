@@ -19,6 +19,7 @@ pub struct FaustBuilder {
     faust_path: Option<String>,
     in_file: String,
     out_file: String,
+    arch_file: Option<String>,
     /// Module name the dsp code will be encapsulated in. By default is "dsp".
     module_name: String,
     /// Name for the DSP struct. If None, we use CamelCased file name.
@@ -33,6 +34,7 @@ impl Default for FaustBuilder {
             faust_path: None,
             in_file: "".into(),
             out_file: "".into(),
+            arch_file: None,
             struct_name: None,
             module_name: "dsp".into(),
             use_double: false,
@@ -68,7 +70,10 @@ impl FaustBuilder {
         self.faust_path = Some(faust_path.to_string());
         self
     }
-
+    pub fn set_arch_file(mut self, arch_file: &str) -> Self {
+        self.arch_file = Some(arch_file.to_string());
+        self
+    }
     /// Add additionals args to the faust build command
     pub fn faust_arg(mut self, arg: &str) -> Self {
         self.faust_args.push(arg.to_string());
@@ -82,11 +87,18 @@ impl FaustBuilder {
 
         let dest_path = PathBuf::from(dest_path);
 
-        let template_code = include_str!("../faust-template.rs");
-        let template_file = NamedTempFile::new().expect("failed creating temporary file");
-        let target_file = NamedTempFile::new().expect("failed creating temporary file");
+        let template_file = match self.arch_file {
+            Some(arch_file) => arch_file,
+            None => {
+                let template_code = include_str!("../faust-template.rs");
+                let default_arch = NamedTempFile::new().expect("failed creating temporary file");
+                fs::write(default_arch.path(), template_code)
+                    .expect("failed writing temporary file");
+                default_arch.path().to_str().unwrap().to_owned()
+            }
+        };
 
-        fs::write(template_file.path(), template_code).expect("failed writing temporary file");
+        let target_file = NamedTempFile::new().expect("failed creating temporary file");
 
         // faust -a $ARCHFILE -lang rust "$SRCDIR/$f" -o "$SRCDIR/$dspName/src/main.rs"
         let faust = self.faust_path.unwrap_or("faust".to_owned());
@@ -107,7 +119,7 @@ impl FaustBuilder {
 
         output
             .arg("-a")
-            .arg(template_file.path())
+            .arg(template_file)
             .arg("-lang")
             .arg("rust")
             .arg("-t")
