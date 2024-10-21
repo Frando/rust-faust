@@ -80,34 +80,32 @@ impl FaustBuilder {
         self
     }
 
-    pub fn build(self) {
-        let dsp_file = self.in_file;
-        let dest_path = self.out_file;
-        eprintln!("cargo:rerun-if-changed={}", dsp_file);
+    pub fn build(&self) {
+        eprintln!("cargo:rerun-if-changed={}", self.in_file);
 
-        let dest_path = PathBuf::from(dest_path);
+        let dest_path = PathBuf::from(&self.out_file);
 
-        let template_file = match self.arch_file {
+        let template_file = match &self.arch_file {
             Some(arch_file) => arch_file,
             None => {
                 let template_code = include_str!("../faust-template.rs");
                 let default_arch = NamedTempFile::new().expect("failed creating temporary file");
                 fs::write(default_arch.path(), template_code)
                     .expect("failed writing temporary file");
-                default_arch.path().to_str().unwrap().to_owned()
+                &default_arch.path().to_str().unwrap().to_owned()
             }
         };
 
         let target_file = NamedTempFile::new().expect("failed creating temporary file");
 
         // faust -a $ARCHFILE -lang rust "$SRCDIR/$f" -o "$SRCDIR/$dspName/src/main.rs"
-        let faust = self.faust_path.unwrap_or("faust".to_owned());
+        let faust = self.faust_path.clone().unwrap_or("faust".to_owned());
         let mut output = Command::new(faust);
 
         let struct_name = match &self.struct_name {
             Some(struct_name) => struct_name.clone(),
             None => {
-                let dsp_path = PathBuf::from(&dsp_file);
+                let dsp_path = PathBuf::from(&self.in_file);
                 dsp_path
                     .file_stem()
                     .unwrap()
@@ -131,11 +129,11 @@ impl FaustBuilder {
             output.arg("-double");
         }
 
-        for arg in self.faust_args {
+        for arg in self.faust_args.clone() {
             output.arg(arg);
         }
 
-        output.arg(&dsp_file).arg("-o").arg(target_file.path());
+        output.arg(&self.in_file).arg("-o").arg(target_file.path());
 
         let output = output.output().expect("Failed to execute command");
         // eprintln!(
@@ -157,5 +155,55 @@ impl FaustBuilder {
         fs::write(&dest_path, dsp_code).expect("failed to write to destination path");
 
         eprintln!("Wrote module:\n{}", dest_path.to_str().unwrap());
+    }
+    pub fn build_xml(&self, out_dir: &str) {
+        eprintln!("cargo:rerun-if-changed={}", self.in_file);
+        let mut output = Command::new(self.faust_path.clone().unwrap_or("faust".to_owned()));
+
+        let struct_name = match &self.struct_name {
+            Some(struct_name) => struct_name.clone(),
+            None => {
+                let dsp_path = PathBuf::from(&self.in_file);
+                dsp_path
+                    .file_stem()
+                    .unwrap()
+                    .to_string_lossy()
+                    .to_string()
+                    .to_camel_case()
+            }
+        };
+
+        output
+            .arg("-lang")
+            .arg("rust")
+            .arg("-xml")
+            .arg("--output-dir")
+            .arg(out_dir)
+            .arg("-t")
+            .arg("0")
+            .arg("-cn")
+            .arg(&struct_name);
+
+        if self.use_double {
+            output.arg("-double");
+        }
+
+        for arg in self.faust_args.clone() {
+            output.arg(arg);
+        }
+        let output = output
+            .arg(&self.in_file)
+            .output()
+            .expect("Failed to execute command");
+        // eprintln!(
+        //     "Wrote temp module:\n{}",
+        //     target_file.path().to_str().unwrap()
+        // );
+        if !output.status.success() {
+            panic!(
+                "faust compilation failed: {}",
+                String::from_utf8(output.stderr).unwrap()
+            );
+        }
     }
 }
