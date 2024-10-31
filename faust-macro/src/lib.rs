@@ -76,8 +76,8 @@ fn faust_build(faust_code: String, name: String) -> TokenStream {
     }
 
     let b = FaustBuilder::new(temp_dsp_path_str, temp_rs_path_str)
-        .set_struct_name(Some(name.clone()))
-        .set_module_name("dsp_".to_owned() + &name);
+        .set_struct_name(&name)
+        .set_module_name(&("dsp_".to_owned() + &name));
     b.build();
 
     if cfg!(debug_assertions) {
