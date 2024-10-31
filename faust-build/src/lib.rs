@@ -85,15 +85,14 @@ impl FaustBuilder {
 
         let dest_path = PathBuf::from(&self.out_file);
 
+        let default_arch = NamedTempFile::new().expect("failed creating temporary file");
+        let template_code = include_str!("../faust-template.rs");
+        fs::write(default_arch.path(), template_code).expect("failed writing temporary file");
+        let default_template = &default_arch.path().to_str().unwrap().to_owned();
+
         let template_file = match &self.arch_file {
             Some(arch_file) => arch_file,
-            None => {
-                let template_code = include_str!("../faust-template.rs");
-                let default_arch = NamedTempFile::new().expect("failed creating temporary file");
-                fs::write(default_arch.path(), template_code)
-                    .expect("failed writing temporary file");
-                &default_arch.path().to_str().unwrap().to_owned()
-            }
+            None => default_template,
         };
 
         let target_file = NamedTempFile::new().expect("failed creating temporary file");
