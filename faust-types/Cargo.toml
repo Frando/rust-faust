@@ -1,8 +1,11 @@
 [package]
 name = "faust-types"
-version = "0.1.0"
+version = "0.2.1"
 authors = ["Franz Heinzmann (Frando) <frando@unbiskant.org>", "obsoleszenz <obsoleszenz@riseup.net>"]
+license = "MIT OR Apache-2.0"
 edition = "2018"
+description = "Types and traits needed by Rust modules built from FAUST dsp files"
+readme = "../README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [features]

@@ -1,10 +1,11 @@
 [package]
 name = "faust-build"
-version = "0.1.0"
+version = "0.2.1"
 authors = ["Franz Heinzmann (Frando) <frando@unbiskant.org>", "obsoleszenz <obsoleszenz@riseup.net>"]
 license = "MIT OR Apache-2.0"
 edition = "2018"
-description = "Build script helper to compile faust code to rust"
+description = "Build FAUST dsp files into Rust modules as part of the normal crate compilation"
+readme = "../README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
