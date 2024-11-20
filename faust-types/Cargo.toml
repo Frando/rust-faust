@@ -1,7 +1,7 @@
 [package]
 name = "faust-types"
 version = "0.1.0"
-authors = ["Franz Heinzmann (Frando) <frando@unbiskant.org>"]
+authors = ["Franz Heinzmann (Frando) <frando@unbiskant.org>", "obsoleszenz <obsoleszenz@riseup.net>"]
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
