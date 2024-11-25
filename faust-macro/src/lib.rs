@@ -37,6 +37,30 @@ fn get_name_token(ts: TokenStream) -> String {
     panic! {"name declaration is not found.\n Expect 'declare name NAMESTRING;' in faust code."};
 }
 
+fn get_flags_token(ts: TokenStream) -> Vec<String> {
+    // find the token that declares the flags in the dsp file
+    let mut ii = ts.into_iter();
+    while let Some(n) = ii.next() {
+        if n.to_string() == "declare" {
+            if let Some(n) = ii.next() {
+                if n.to_string() == "flags" {
+                    if let Some(flags) = ii.next() {
+                        if let Some(semicolon) = ii.next() {
+                            if semicolon.to_string() == ";" {
+                                return strip_quotes(flags)
+                                    .split_whitespace()
+                                    .map(|s| s.to_owned())
+                                    .collect();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    vec![]
+}
+
 fn write_temp_dsp_file(faust_code: String) -> NamedTempFile {
     let temp_dsp = NamedTempFile::new().expect("failed creating temp dsp file");
     let mut f = BufWriter::new(temp_dsp);
@@ -45,7 +69,7 @@ fn write_temp_dsp_file(faust_code: String) -> NamedTempFile {
     f.into_inner().expect("temp dsp error on flush")
 }
 
-fn faust_build(faust_code: String, name: String) -> TokenStream {
+fn faust_build(faust_code: String, name: String, flags: Vec<String>) -> TokenStream {
     // define paths for .dsp and .rs files that help debugging
     let mut debug_dsp = Path::new(".")
         .join("target")
@@ -78,6 +102,7 @@ fn faust_build(faust_code: String, name: String) -> TokenStream {
     let b: FaustBuilder = FaustBuilder::new(temp_dsp_path_str, temp_rs_path_str)
         .set_struct_name(&name)
         .set_module_name(&("dsp_".to_owned() + &name));
+    let b = flags.iter().fold(b, |b, flag| b.faust_arg(flag));
     b.build();
     debug_dsp.set_extension("xml");
 
@@ -100,6 +125,7 @@ fn faust_build(faust_code: String, name: String) -> TokenStream {
 #[proc_macro]
 pub fn faust(input: TokenStream) -> TokenStream {
     let faust_code = format!("{}", input).replace(';', ";\n");
-    let name = get_name_token(input);
-    faust_build(faust_code, name)
+    let name = get_name_token(input.clone());
+    let flags = get_flags_token(input);
+    faust_build(faust_code, name, flags)
 }
