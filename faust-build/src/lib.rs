@@ -81,8 +81,6 @@ impl FaustBuilder {
     }
 
     pub fn build(&self) {
-        eprintln!("cargo:rerun-if-changed={}", self.in_file);
-
         let dest_path = PathBuf::from(&self.out_file);
 
         let default_arch = NamedTempFile::new().expect("failed creating temporary file");
@@ -135,10 +133,6 @@ impl FaustBuilder {
         output.arg(&self.in_file).arg("-o").arg(target_file.path());
 
         let output = output.output().expect("Failed to execute command");
-        // eprintln!(
-        //     "Wrote temp module:\n{}",
-        //     target_file.path().to_str().unwrap()
-        // );
         if !output.status.success() {
             panic!(
                 "faust compilation failed: {}",
@@ -156,7 +150,6 @@ impl FaustBuilder {
         eprintln!("Wrote module:\n{}", dest_path.to_str().unwrap());
     }
     pub fn build_xml(&self, out_dir: &str) {
-        eprintln!("cargo:rerun-if-changed={}", self.in_file);
         let mut output = Command::new(self.faust_path.clone().unwrap_or("faust".to_owned()));
 
         let struct_name = match &self.struct_name {
@@ -194,10 +187,6 @@ impl FaustBuilder {
             .arg(&self.in_file)
             .output()
             .expect("Failed to execute command");
-        // eprintln!(
-        //     "Wrote temp module:\n{}",
-        //     target_file.path().to_str().unwrap()
-        // );
         if !output.status.success() {
             panic!(
                 "faust compilation failed: {}",
