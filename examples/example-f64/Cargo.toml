@@ -5,8 +5,13 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+default = ["default-boxed"]
+
 [dependencies]
 faust-types = { path = "../../faust-types" }
+
+default-boxed = { version = "*", optional = true}
 
 [build-dependencies]
 faust-build = { path = "../../faust-build" }

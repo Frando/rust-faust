@@ -80,6 +80,21 @@ impl FaustBuilder {
         self
     }
 
+    fn get_struct_name(&self) -> String {
+        match &self.struct_name {
+            Some(struct_name) => struct_name.clone(),
+            None => {
+                let dsp_path = PathBuf::from(&self.in_file);
+                dsp_path
+                    .file_stem()
+                    .unwrap()
+                    .to_string_lossy()
+                    .to_string()
+                    .to_camel_case()
+            }
+        }
+    }
+
     pub fn build(&self) {
         let dest_path = PathBuf::from(&self.out_file);
 
@@ -99,18 +114,7 @@ impl FaustBuilder {
         let faust = self.faust_path.clone().unwrap_or("faust".to_owned());
         let mut output = Command::new(faust);
 
-        let struct_name = match &self.struct_name {
-            Some(struct_name) => struct_name.clone(),
-            None => {
-                let dsp_path = PathBuf::from(&self.in_file);
-                dsp_path
-                    .file_stem()
-                    .unwrap()
-                    .to_string_lossy()
-                    .to_string()
-                    .to_camel_case()
-            }
-        };
+        let struct_name = self.get_struct_name();
 
         output
             .arg("-a")
@@ -164,18 +168,7 @@ impl FaustBuilder {
     pub fn build_xml(&self) {
         let mut output = Command::new(self.faust_path.clone().unwrap_or("faust".to_owned()));
 
-        let struct_name = match &self.struct_name {
-            Some(struct_name) => struct_name.clone(),
-            None => {
-                let dsp_path = PathBuf::from(&self.in_file);
-                dsp_path
-                    .file_stem()
-                    .unwrap()
-                    .to_string_lossy()
-                    .to_string()
-                    .to_camel_case()
-            }
-        };
+        let struct_name = self.get_struct_name();
 
         output
             .arg("-lang")
