@@ -1,13 +1,14 @@
 [workspace]
 members = [
-  "faust-macro", 
-  "faust-build", 
+  "faust-build",
+  "faust-json",
+  "faust-macro",
   "faust-state",
   "faust-types",
   "faust-xml",
   "examples/example-jack",
   "examples/example-jack-macro",
-  "examples/example-dbmeter-jack", 
-  "examples/example-f64", 
+  "examples/example-dbmeter-jack",
+  "examples/example-f64",
 ]
 resolver="2"
