@@ -47,7 +47,7 @@ fn write_temp_dsp_file(faust_code: String) -> NamedTempFile {
 
 fn faust_build(faust_code: String, name: String) -> TokenStream {
     // define paths for .dsp and .rs files that help debugging
-    let debug_dsp = Path::new(".")
+    let mut debug_dsp = Path::new(".")
         .join("target")
         .join("DEBUG_".to_owned() + &name)
         .with_extension("dsp");
@@ -70,15 +70,22 @@ fn faust_build(faust_code: String, name: String) -> TokenStream {
         .expect("temp file rs path contains non-UTF-8");
 
     if cfg!(debug_assertions) {
-        fs::copy(temp_dsp_path, debug_dsp).expect("temp dsp file cannot be copied to target");
+        fs::copy(temp_dsp_path, &debug_dsp).expect("temp dsp file cannot be copied to target");
     } else {
-        let _ignore_error = fs::remove_file(debug_dsp);
+        let _ignore_error = fs::remove_file(&debug_dsp);
     }
 
-    let b = FaustBuilder::new(temp_dsp_path_str, temp_rs_path_str)
+    let b: FaustBuilder = FaustBuilder::new(temp_dsp_path_str, temp_rs_path_str)
         .set_struct_name(&name)
         .set_module_name(&("dsp_".to_owned() + &name));
     b.build();
+    debug_dsp.set_extension("xml");
+
+    b.build_xml_at_file(
+        debug_dsp
+            .to_str()
+            .expect("debug path for xml is not a valid string"),
+    );
 
     if cfg!(debug_assertions) {
         fs::copy(temp_rs_path_str, debug_rs).expect("rsfile cannot be copied to target");
