@@ -1,0 +1,64 @@
+
+<faust>
+	<name>volumecontrol</name>
+	<author>Franz Heinzmann</author>
+	<copyright></copyright>
+	<license>BSD</license>
+	<version>1.0</version>
+	<classname>Volume</classname>
+	<inputs>2</inputs>
+	<outputs>2</outputs>
+	<meta key="basics.lib/name">Faust Basic Element Library</meta>
+	<meta key="basics.lib/tabulateNd">Copyright (C) 2023 Bart Brouns &lt;bart@magnetophon.nl&gt;</meta>
+	<meta key="basics.lib/version">1.18.0</meta>
+	<meta key="compile_options">-lang rust -ct 1 -cn Volume -es 1 -mcd 16 -mdd 1024 -mdy 33 -double -ftz 0</meta>
+	<meta key="filename">volume.dsp</meta>
+	<meta key="maths.lib/author">GRAME</meta>
+	<meta key="maths.lib/copyright">GRAME</meta>
+	<meta key="maths.lib/license">LGPL with exception</meta>
+	<meta key="maths.lib/name">Faust Math Library</meta>
+	<meta key="maths.lib/version">2.8.0</meta>
+	<meta key="options"></meta>
+	<meta key="platform.lib/name">Generic Platform Library</meta>
+	<meta key="platform.lib/version">1.3.0</meta>
+	<meta key="signals.lib/name">Faust Signal Routing Library</meta>
+	<meta key="signals.lib/version">1.5.0</meta>
+	<ui>
+		<activewidgets>
+			<count>1</count>
+			<widget type="vslider" id="2">
+				<label>volume</label>
+				<varname>fVslider0</varname>
+				<init>0.0</init>
+				<min>-7e+01</min>
+				<max>4.0</max>
+				<step>0.1</step>
+			</widget>
+		</activewidgets>
+		
+		<passivewidgets>
+			<count>1</count>
+			<widget type="vbargraph" id="1">
+				<label>level</label>
+				<varname>fVbargraph0</varname>
+				<min>-6e+01</min>
+				<max>5.0</max>
+				<meta key="2"></meta>
+				<meta key="style">dB</meta>
+				<meta key="unit">dB</meta>
+			</widget>
+		</passivewidgets>
+		
+		<soundfilewidgets>
+			<count>0</count>
+		</soundfilewidgets>
+		
+		<layout>
+			<group type="vgroup">
+				<label>0x00</label>
+				<widgetref id="1" />
+				<widgetref id="2" />
+			</group>
+		</layout>
+	</ui>
+</faust>

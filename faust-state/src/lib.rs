@@ -145,7 +145,6 @@ where
         unsafe {
             use std::arch::x86_64::*;
             _mm_setcsr(fspr);
-            return;
         }
     }
 
@@ -266,7 +265,7 @@ impl StateHandle {
     pub fn params_by_path(&self) -> impl Iterator<Item = (&String, Option<&f32>)> {
         self.params_by_path
             .iter()
-            .map(move |(path, idx)| (path, self.get_param(*idx).clone()))
+            .map(move |(path, idx)| (path, self.get_param(*idx)))
     }
 
     pub fn meta(&self) -> &HashMap<String, String> {
@@ -305,15 +304,8 @@ struct ParamsBuilder {
     first_group: bool,
 }
 
-#[derive(Debug)]
-struct Params {
-    map: HashMap<i32, Node>,
-    prefix: Vec<String>,
-}
-
 #[derive(Debug, Clone, Default)]
 pub struct Node {
-    idx: i32,
     label: String,
     prefix: String,
     typ: WidgetType,
@@ -336,10 +328,11 @@ impl Node {
 }
 
 /// General types of widgets declared in the DSP
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub enum WidgetType {
     /// Only has metadata
     /// There should not be any after building the DSP.
+    #[default]
     Unknown,
     /// Temporary on button.
     Button,
@@ -355,12 +348,6 @@ pub enum WidgetType {
     HorizontalBarGraph(RangedOutput),
     /// Vertical bargraph
     VerticalBargraph(RangedOutput),
-}
-
-impl Default for WidgetType {
-    fn default() -> Self {
-        WidgetType::Unknown
-    }
 }
 
 impl WidgetType {
@@ -452,22 +439,21 @@ impl ParamsBuilder {
     ) {
         let prefix = self.prefix[..].join("/").to_string();
         let idx = idx.0;
-        if self.inner.contains_key(&idx) {
+        if let std::collections::hash_map::Entry::Vacant(e) = self.inner.entry(idx) {
+            let node = Node {
+                label: label.to_string(),
+                prefix,
+                typ,
+                metadata: metadata.unwrap_or_default(),
+            };
+            e.insert(node);
+        } else {
             let node = self.inner.get_mut(&idx).unwrap();
             node.label = label.to_string();
             node.typ = typ;
             if let Some(mut metadata) = metadata {
                 node.metadata.append(metadata.as_mut());
             }
-        } else {
-            let node = Node {
-                idx,
-                label: label.to_string(),
-                prefix,
-                typ,
-                metadata: metadata.unwrap_or_default(),
-            };
-            self.inner.insert(idx, node);
         }
     }
 }
@@ -550,10 +536,8 @@ impl UI<f32> for ParamsBuilder {
                     WidgetType::default(),
                     Some(vec![[key.to_string(), value.to_string()]]),
                 )
-            } else {
-                if let Some(node) = self.inner.get_mut(&param_index.0) {
-                    node.metadata.push([key.to_string(), value.to_string()]);
-                }
+            } else if let Some(node) = self.inner.get_mut(&param_index.0) {
+                node.metadata.push([key.to_string(), value.to_string()]);
             }
         }
     }

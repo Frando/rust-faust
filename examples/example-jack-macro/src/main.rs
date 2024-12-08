@@ -4,6 +4,7 @@ use faust_state::DspHandle;
 use jack_utils::run_dsp_as_jack_client;
 
 faust_macro::faust!(
+    declare flags       "-single"; // example for possible flags declaration use
     declare name        "VolumeControl";
     declare version     "1.0";
     declare author      "Franz Heinzmann";
