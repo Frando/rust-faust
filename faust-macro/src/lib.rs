@@ -3,7 +3,7 @@ use proc_macro::{TokenStream, TokenTree};
 use std::{
     fs::{self, read_to_string},
     io::{BufWriter, Write},
-    path::Path,
+    path::{self, Path, PathBuf},
 };
 use tempfile::NamedTempFile;
 
@@ -16,17 +16,17 @@ fn strip_quotes(name: TokenTree) -> String {
         .to_string()
 }
 
-fn get_name_token(ts: TokenStream) -> String {
-    // find the token that declares the name in the dsp file
+fn get_declared_value(key: &str, ts: TokenStream) -> Option<String> {
+    // find the token that declares a key in the dsp file
     let mut ii = ts.into_iter();
     while let Some(n) = ii.next() {
         if n.to_string() == "declare" {
             if let Some(n) = ii.next() {
-                if n.to_string() == "name" {
-                    if let Some(name) = ii.next() {
+                if n.to_string() == key {
+                    if let Some(value) = ii.next() {
                         if let Some(semicolon) = ii.next() {
                             if semicolon.to_string() == ";" {
-                                return strip_quotes(name);
+                                return Some(strip_quotes(value));
                             }
                         }
                     }
@@ -34,31 +34,23 @@ fn get_name_token(ts: TokenStream) -> String {
             }
         }
     }
-    panic! {"name declaration is not found.\n Expect 'declare name NAMESTRING;' in faust code."};
+    None
+}
+
+fn get_name_token(ts: TokenStream) -> String {
+    get_declared_value("name", ts)
+        .expect("name declaration is not found.\n Expect 'declare name NAMESTRING;' in faust code.")
+}
+
+fn get_architecture_token(ts: TokenStream) -> Option<String> {
+    get_declared_value("architecture", ts)
 }
 
 fn get_flags_token(ts: TokenStream) -> Vec<String> {
-    // find the token that declares the flags in the dsp file
-    let mut ii = ts.into_iter();
-    while let Some(n) = ii.next() {
-        if n.to_string() == "declare" {
-            if let Some(n) = ii.next() {
-                if n.to_string() == "flags" {
-                    if let Some(flags) = ii.next() {
-                        if let Some(semicolon) = ii.next() {
-                            if semicolon.to_string() == ";" {
-                                return strip_quotes(flags)
-                                    .split_whitespace()
-                                    .map(|s| s.to_owned())
-                                    .collect();
-                            }
-                        }
-                    }
-                }
-            }
-        }
+    match get_declared_value("flags", ts) {
+        None => vec![],
+        Some(s) => s.split_whitespace().map(|s| s.to_owned()).collect(),
     }
-    vec![]
 }
 
 fn write_temp_dsp_file(faust_code: String) -> NamedTempFile {
@@ -69,7 +61,12 @@ fn write_temp_dsp_file(faust_code: String) -> NamedTempFile {
     f.into_inner().expect("temp dsp error on flush")
 }
 
-fn faust_build(faust_code: String, name: String, flags: Vec<String>) -> TokenStream {
+fn faust_build(
+    faust_code: String,
+    name: String,
+    flags: Vec<String>,
+    architecture: Option<String>,
+) -> TokenStream {
     // define paths for .dsp and .rs files that help debugging
     let mut debug_dsp = Path::new(".")
         .join("target")
@@ -99,9 +96,22 @@ fn faust_build(faust_code: String, name: String, flags: Vec<String>) -> TokenStr
         let _ignore_error = fs::remove_file(&debug_dsp);
     }
 
-    let b: FaustBuilder = FaustBuilder::new(temp_dsp_path_str, temp_rs_path_str)
+    let mut b: FaustBuilder = FaustBuilder::new(temp_dsp_path_str, temp_rs_path_str)
         .set_struct_name(&name)
         .set_module_name(&("dsp_".to_owned() + &name));
+
+    if let Some(a) = architecture {
+        let p = PathBuf::from(&a);
+        let ap = if p.is_absolute() {
+            p
+        } else {
+            path::absolute(p).unwrap_or_else(|_| {
+                panic!("could not make architecture path into a absolute path: '{a}'")
+            })
+        };
+        b = b.set_arch_file(ap.to_str().unwrap());
+    }
+
     let b = flags.iter().fold(b, |b, flag| b.faust_arg(flag));
     b.build();
     debug_dsp.set_extension("xml");
@@ -126,6 +136,7 @@ fn faust_build(faust_code: String, name: String, flags: Vec<String>) -> TokenStr
 pub fn faust(input: TokenStream) -> TokenStream {
     let faust_code = format!("{}", input).replace(';', ";\n");
     let name = get_name_token(input.clone());
-    let flags = get_flags_token(input);
-    faust_build(faust_code, name, flags)
+    let flags = get_flags_token(input.clone());
+    let architecture = get_architecture_token(input);
+    faust_build(faust_code, name, flags, architecture)
 }
