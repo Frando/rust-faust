@@ -154,18 +154,7 @@ impl FaustBuilder {
         eprintln!("Wrote module:\n{}", dest_path.to_str().unwrap());
     }
 
-    pub fn build_xml_at_file(&self, out: &str) {
-        let gen_xml_fn = self.in_file.to_owned() + ".xml";
-        self.build_xml();
-        fs::rename(&gen_xml_fn, out).unwrap_or_else(|_| {
-            panic!(
-                "rename of xml file failed from '{:?}' to '{:?}'",
-                gen_xml_fn, out
-            )
-        });
-    }
-
-    pub fn build_xml(&self) {
+    pub fn build_ignore_output(&self, extra_flags: &[&str]) {
         let mut output = Command::new(self.faust_path.clone().unwrap_or("faust".to_owned()));
 
         let struct_name = self.get_struct_name();
@@ -173,11 +162,14 @@ impl FaustBuilder {
         output
             .arg("-lang")
             .arg("rust")
-            .arg("-xml")
             .arg("-t")
             .arg("0")
             .arg("-cn")
             .arg(&struct_name);
+
+        for flag in extra_flags {
+            output.arg(flag);
+        }
 
         if self.use_double {
             output.arg("-double");
@@ -196,5 +188,35 @@ impl FaustBuilder {
                 String::from_utf8(output.stderr).unwrap()
             );
         }
+    }
+
+    pub fn build_xml(&self) {
+        self.build_ignore_output(&["-xml"]);
+    }
+
+    pub fn build_xml_at_file(&self, out: &str) {
+        let gen_xml_fn = self.in_file.to_owned() + ".xml";
+        self.build_xml();
+        fs::rename(&gen_xml_fn, out).unwrap_or_else(|_| {
+            panic!(
+                "rename of xml file failed from '{:?}' to '{:?}'",
+                gen_xml_fn, out
+            )
+        });
+    }
+
+    pub fn build_json(&self) {
+        self.build_ignore_output(&["-json"]);
+    }
+
+    pub fn build_json_at_file(&self, out: &str) {
+        let gen_json_fn = self.in_file.to_owned() + ".json";
+        self.build_json();
+        fs::rename(&gen_json_fn, out).unwrap_or_else(|_| {
+            panic!(
+                "rename of json file failed from '{:?}' to '{:?}'",
+                gen_json_fn, out
+            )
+        });
     }
 }
