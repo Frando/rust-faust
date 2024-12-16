@@ -4,7 +4,9 @@ use faust_state::DspHandle;
 use jack_utils::run_dsp_as_jack_client;
 
 faust_macro::faust!(
-    declare name        "VolumeControl";
+    declare flags       "-single"; // example for possible flags declaration use
+    declare architecture "faust-build/faust-template.rs"; // example of relative path to architecture file
+    declare name        "VolumeControl"; //necessary declaration to have a valid name
     declare version     "1.0";
     declare author      "Franz Heinzmann";
     declare license     "BSD";

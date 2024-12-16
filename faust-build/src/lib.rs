@@ -80,9 +80,22 @@ impl FaustBuilder {
         self
     }
 
-    pub fn build(&self) {
-        eprintln!("cargo:rerun-if-changed={}", self.in_file);
+    fn get_struct_name(&self) -> String {
+        match &self.struct_name {
+            Some(struct_name) => struct_name.clone(),
+            None => {
+                let dsp_path = PathBuf::from(&self.in_file);
+                dsp_path
+                    .file_stem()
+                    .unwrap()
+                    .to_string_lossy()
+                    .to_string()
+                    .to_camel_case()
+            }
+        }
+    }
 
+    pub fn build(&self) {
         let dest_path = PathBuf::from(&self.out_file);
 
         let default_arch = NamedTempFile::new().expect("failed creating temporary file");
@@ -101,18 +114,7 @@ impl FaustBuilder {
         let faust = self.faust_path.clone().unwrap_or("faust".to_owned());
         let mut output = Command::new(faust);
 
-        let struct_name = match &self.struct_name {
-            Some(struct_name) => struct_name.clone(),
-            None => {
-                let dsp_path = PathBuf::from(&self.in_file);
-                dsp_path
-                    .file_stem()
-                    .unwrap()
-                    .to_string_lossy()
-                    .to_string()
-                    .to_camel_case()
-            }
-        };
+        let struct_name = self.get_struct_name();
 
         output
             .arg("-a")
@@ -135,10 +137,6 @@ impl FaustBuilder {
         output.arg(&self.in_file).arg("-o").arg(target_file.path());
 
         let output = output.output().expect("Failed to execute command");
-        // eprintln!(
-        //     "Wrote temp module:\n{}",
-        //     target_file.path().to_str().unwrap()
-        // );
         if !output.status.success() {
             panic!(
                 "faust compilation failed: {}",
@@ -155,33 +153,23 @@ impl FaustBuilder {
 
         eprintln!("Wrote module:\n{}", dest_path.to_str().unwrap());
     }
-    pub fn build_xml(&self, out_dir: &str) {
-        eprintln!("cargo:rerun-if-changed={}", self.in_file);
+
+    pub fn build_ignore_output(&self, extra_flags: &[&str]) {
         let mut output = Command::new(self.faust_path.clone().unwrap_or("faust".to_owned()));
 
-        let struct_name = match &self.struct_name {
-            Some(struct_name) => struct_name.clone(),
-            None => {
-                let dsp_path = PathBuf::from(&self.in_file);
-                dsp_path
-                    .file_stem()
-                    .unwrap()
-                    .to_string_lossy()
-                    .to_string()
-                    .to_camel_case()
-            }
-        };
+        let struct_name = self.get_struct_name();
 
         output
             .arg("-lang")
             .arg("rust")
-            .arg("-xml")
-            .arg("--output-dir")
-            .arg(out_dir)
             .arg("-t")
             .arg("0")
             .arg("-cn")
             .arg(&struct_name);
+
+        for flag in extra_flags {
+            output.arg(flag);
+        }
 
         if self.use_double {
             output.arg("-double");
@@ -194,15 +182,41 @@ impl FaustBuilder {
             .arg(&self.in_file)
             .output()
             .expect("Failed to execute command");
-        // eprintln!(
-        //     "Wrote temp module:\n{}",
-        //     target_file.path().to_str().unwrap()
-        // );
         if !output.status.success() {
             panic!(
                 "faust compilation failed: {}",
                 String::from_utf8(output.stderr).unwrap()
             );
         }
+    }
+
+    pub fn build_xml(&self) {
+        self.build_ignore_output(&["-xml"]);
+    }
+
+    pub fn build_xml_at_file(&self, out: &str) {
+        let gen_xml_fn = self.in_file.to_owned() + ".xml";
+        self.build_xml();
+        fs::rename(&gen_xml_fn, out).unwrap_or_else(|_| {
+            panic!(
+                "rename of xml file failed from '{:?}' to '{:?}'",
+                gen_xml_fn, out
+            )
+        });
+    }
+
+    pub fn build_json(&self) {
+        self.build_ignore_output(&["-json"]);
+    }
+
+    pub fn build_json_at_file(&self, out: &str) {
+        let gen_json_fn = self.in_file.to_owned() + ".json";
+        self.build_json();
+        fs::rename(&gen_json_fn, out).unwrap_or_else(|_| {
+            panic!(
+                "rename of json file failed from '{:?}' to '{:?}'",
+                gen_json_fn, out
+            )
+        });
     }
 }
