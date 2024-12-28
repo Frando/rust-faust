@@ -8,6 +8,7 @@ members = [
   "faust-types",
   "faust-xml",
   "examples/example-jack",
+  "examples/example-jack-new",
   "examples/example-jack-macro",
   "examples/example-dbmeter-jack",
   "examples/example-f64",
