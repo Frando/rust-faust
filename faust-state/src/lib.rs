@@ -24,9 +24,9 @@ where
         Self::from_dsp(dsp)
     }
 
-    pub fn from_dsp(mut dsp: Box<T>) -> (Self, StateHandle) {
-        let meta = MetaBuilder::from_dsp(dsp.as_mut());
-        let params = ParamsBuilder::from_dsp(dsp.as_mut());
+    pub fn from_dsp(dsp: Box<T>) -> (Self, StateHandle) {
+        let meta = MetaBuilder::from_dsp(&*dsp);
+        let params = ParamsBuilder::from_dsp(&*dsp);
         let name = meta
             .get("name")
             .map_or(DEFAULT_NAME, String::as_str)
@@ -282,7 +282,7 @@ struct MetaBuilder {
 }
 
 impl MetaBuilder {
-    fn from_dsp<T>(dsp: &dyn FaustDsp<T = T>) -> HashMap<String, String> {
+    fn from_dsp<T>(dsp: &impl FaustDsp<T = T>) -> HashMap<String, String> {
         let mut metadata = Self {
             inner: HashMap::new(),
         };
@@ -410,10 +410,7 @@ impl ParamsBuilder {
             // state: Vec::new(),
         }
     }
-    fn from_dsp<D>(dsp: &mut D) -> HashMap<i32, Node>
-    where
-        D: FaustDsp<T = f32>,
-    {
+    fn from_dsp(dsp: &impl FaustDsp<T = f32>) -> HashMap<i32, Node> {
         let mut builder = Self::new();
         dsp.build_user_interface(&mut builder);
         builder.inner
