@@ -38,7 +38,7 @@ impl<'de> Deserialize<'de> for Meta {
         D: Deserializer<'de>,
     {
         let map: HashMap<String, Option<String>> = Deserialize::deserialize(deserializer)
-            .unwrap_or_else(|err| panic!("Error during Deserialization: {}", err.to_string()));
+            .unwrap_or_else(|err| panic!("Error during Deserialization: {err}"));
         let Some((key, Some(value))): Option<(&String, &Option<String>)> = map.iter().next() else {
             panic!("meta dictionary is unexpectedly empty")
         };

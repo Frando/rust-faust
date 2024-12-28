@@ -1,28 +1,17 @@
 [package]
-name = "faust-macro"
-version = "0.2.0"
-authors = ["olafklingt","crop2000"]
+name = "faust-macro-lib"
+version = "0.1.0"
 edition = "2021"
-license = "MIT OR Apache-2.0"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-
-[lib]
-proc-macro = true
-
-[features]
 
 [dependencies]
 #faust-build = { git = "http://github.com/Frando/rust-faust.git" }
 #faust-json = { git = "http://github.com/Frando/rust-faust.git" }
 faust-build = { path = "../faust-build" }
 faust-json =  { path = "../faust-json" }
-faust-macro-lib =  { path = "../faust-macro-lib" }
 
-tempfile = "3.2"
 prettyplease = "^0.2"
-syn = "^2.0"
 proc-macro2 = "*"
 quote = "^1.0"
 serde_json = "*"
+syn = "^2.0"
+tempfile = "3.2"

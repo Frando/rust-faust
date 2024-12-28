@@ -3,6 +3,7 @@ members = [
   "faust-build",
   "faust-json",
   "faust-macro",
+  "faust-macro-lib",
   "faust-state",
   "faust-types",
   "faust-xml",
