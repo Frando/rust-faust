@@ -1,0 +1,30 @@
+[package]
+name = "jack-ui"
+version = "0.1.0"
+authors = ["Franz Heinzmann (Frando) <frando@unbiskant.org>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+default = ["default-boxed"]
+
+[dependencies]
+default-boxed = { version = "*", optional = true}
+faust-types = { path = "../../faust-types" }
+faust-state = { path = "../../faust-state" }
+jack-utils = { path = "../jack-utils" }
+jack = "0.13"
+triple_buffer = "8.0.0"
+strum = { version = "0.27", features = ["derive"] }
+
+
+[build-dependencies]
+faust-build = { path = "../../faust-build" }
+faust-json =  { path = "../../faust-json" }
+serde_json = "*"
+quote = "^1.0"
+prettyplease = "^0.2"
+syn = "^2.0"
+tempfile = "3.2.0"
+proc-macro2 = "*"
