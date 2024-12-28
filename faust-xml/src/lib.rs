@@ -1,9 +1,17 @@
+#![warn(
+    clippy::all,
+    // clippy::restriction,
+    clippy::pedantic,
+    clippy::nursery,
+    // clippy::cargo
+)]
+
 use quick_xml::impl_deserialize_for_internally_tagged_enum;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct Faust {
+pub struct FaustXML {
     pub name: String,
     pub author: Option<String>,
     pub license: Option<String>,
@@ -19,7 +27,7 @@ pub struct Faust {
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
-#[derive(PartialEq)]
+#[derive(PartialEq, Eq)]
 pub struct Meta {
     #[serde(rename = "@key")]
     pub key: String,
