@@ -25,14 +25,14 @@ enum StructInfo {
 impl StructInfo {
     pub fn active(label: &str, shortname: &str) -> Self {
         Self::UIInfo {
-            type_name: enum_interface::active_ident(),
+            type_name: enum_interface::alias_active_ident(),
             label: format_ident!("{label}"),
             shortname: format_ident!("{shortname}"),
         }
     }
     pub fn passive(label: &str, shortname: &str) -> Self {
         Self::UIInfo {
-            type_name: enum_interface::passive_ident(),
+            type_name: enum_interface::alias_passive_ident(),
             label: format_ident!("{label}"),
             shortname: format_ident!("{shortname}"),
         }
@@ -96,13 +96,13 @@ impl GetGroupInfo for LayoutItem {
             }
             | Self::CheckBox {
                 label, shortname, ..
-            } => StructInfo::active(label, shortname),
+            } => StructInfo::active(label, &shortname.to_camel_case()),
             Self::VBarGraph {
                 label, shortname, ..
             }
             | Self::HBarGraph {
                 label, shortname, ..
-            } => StructInfo::passive(label, shortname),
+            } => StructInfo::passive(label, &shortname.to_camel_case()),
             Self::Soundfile { address, .. } => StructInfo::active(address, address),
         }
     }
