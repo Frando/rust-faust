@@ -196,11 +196,11 @@ impl std::convert::From<String> for FaustArg {
 /// Trait to transform a `FaustArg` or a Vector o`FaustArgs`gs into a Vector`OsStr`sStr references.
 ///
 /// `FaustArgs` cannot simply be tranlated into an &`OsStr` because one enum variant might produce two command arguments
-pub trait FaustArgs2CommandArgs {
+pub trait FaustArgsToCommandArgs {
     fn to_command_args(&self) -> Vec<&OsStr>;
 }
 
-impl FaustArgs2CommandArgs for FaustArg {
+impl FaustArgsToCommandArgs for FaustArg {
     fn to_command_args(&self) -> Vec<&OsStr> {
         match self {
             Self::Arg(arg) => vec![arg.as_ref()],
@@ -229,7 +229,7 @@ impl FaustArgs2CommandArgs for FaustArg {
     }
 }
 
-impl FaustArgs2CommandArgs for Vec<FaustArg> {
+impl FaustArgsToCommandArgs for Vec<FaustArg> {
     fn to_command_args(&self) -> Vec<&OsStr> {
         self.iter().flat_map(|fa| fa.to_command_args()).collect()
     }

@@ -12,7 +12,7 @@
 pub mod faust_arg;
 pub mod faust_utils;
 
-use faust_arg::{FaustArg, FaustArgs2CommandArgs};
+use faust_arg::{FaustArg, FaustArgsToCommandArgs};
 use std::{
     env, fs,
     path::{Path, PathBuf},
@@ -120,9 +120,11 @@ impl FaustBuilder {
     pub fn to_faust_args(&self, extra_flags: Vec<FaustArg>) -> Vec<FaustArg> {
         let mut args: Vec<FaustArg> = Vec::new();
 
-        args.push(FaustArg::default_lang());
-        args.push(FaustArg::default_timeout());
-        args.push(FaustArg::StructName(self.get_struct_name()));
+        args.extend([
+            FaustArg::default_lang(),
+            FaustArg::default_timeout(),
+            FaustArg::StructName(self.get_struct_name()),
+        ]);
 
         if self.use_double {
             args.push(FaustArg::Double);
