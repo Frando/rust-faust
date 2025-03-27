@@ -12,3 +12,7 @@ readme = "../README.md"
 [dependencies]
 tempfile = "3.2.0"
 heck = "0.3.2"
+
+[build-dependencies]
+regex = "*"
+heck = "0.3.2"
