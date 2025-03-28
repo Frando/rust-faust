@@ -6,8 +6,7 @@
 #![allow(unused_mut)]
 #![allow(non_upper_case_globals)]
 
-//! Faust JACK architecture file
-#[cfg(feature = "jack")]
+#[cfg(feature = "libm")]
 pub use libm;
 
 pub type F32 = f32;

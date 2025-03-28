@@ -60,7 +60,7 @@ where
         jack::Control::Continue
     };
     // Init JACK process handler.
-    let process = jack::ClosureProcessHandler::new(process_callback);
+    let process = jack::contrib::ClosureProcessHandler::new(process_callback);
 
     // Activate the client, which starts the processing.
     let active_client = jack::AsyncClient::new(client, (), process).unwrap();
@@ -72,7 +72,7 @@ where
     active_client.deactivate().unwrap();
 }
 
-fn create_jack_client(
+pub fn create_jack_client(
     name: &str,
     num_inputs: usize,
     num_outputs: usize,
@@ -83,13 +83,13 @@ fn create_jack_client(
 
     for i in 0..num_inputs {
         let port = client
-            .register_port(&format!("in{}", i), jack::AudioIn)
+            .register_port(&format!("in{}", i), jack::AudioIn::default())
             .unwrap();
         in_ports.push(port);
     }
     for i in 0..num_outputs {
         let port = client
-            .register_port(&format!("out{}", i), jack::AudioOut)
+            .register_port(&format!("out{}", i), jack::AudioOut::default())
             .unwrap();
         out_ports.push(port);
     }

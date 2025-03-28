@@ -12,7 +12,7 @@ fn parse_file(p: PathBuf) {
     let file = File::open(p).expect("Failed to open file");
     let reader = BufReader::new(file);
     let f = &mut quick_xml::de::Deserializer::from_reader(reader);
-    let result: Result<Faust, _> = serde_path_to_error::deserialize(f);
+    let result: Result<FaustXML, _> = serde_path_to_error::deserialize(f);
     match &result {
         Ok(_f) => {
             // dbg!(f);
@@ -128,7 +128,7 @@ fn hand_written() {
         </ui>
 </faust>
     "##;
-    let result: Result<Faust, _> = from_str(f);
+    let result: Result<FaustXML, _> = from_str(f);
     match &result {
         Ok(f) => {
             dbg!(f);
@@ -225,7 +225,7 @@ fn hand_written_broken() {
         </ui>
 </faust>
     "##;
-    let one: Result<Faust, _> = from_str(f);
+    let one: Result<FaustXML, _> = from_str(f);
     match one {
         Ok(f) => {
             dbg!(f);
@@ -236,7 +236,7 @@ fn hand_written_broken() {
     };
 
     let f = &mut quick_xml::de::Deserializer::from_reader(f.as_bytes());
-    let result: Result<Faust, _> = serde_path_to_error::deserialize(f);
+    let result: Result<FaustXML, _> = serde_path_to_error::deserialize(f);
     match &result {
         Ok(f) => {
             dbg!(f);

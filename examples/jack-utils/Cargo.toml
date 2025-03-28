@@ -9,8 +9,7 @@ edition = "2018"
 [dependencies]
 faust-types = { path = "../../faust-types" }
 faust-state = { path = "../../faust-state" }
-jack = "0.7.0"
-rtrb = "0.1.3"
+jack = "0.13"
 
 [build-dependencies]
 faust-build = { path = "../../faust-build" }
