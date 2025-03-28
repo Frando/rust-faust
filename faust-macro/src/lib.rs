@@ -112,7 +112,7 @@ fn faust_build(
         b = b.set_arch_file(ap.to_str().unwrap());
     }
 
-    let b = flags.iter().fold(b, |b, flag| b.faust_arg(flag));
+    let b = flags.into_iter().fold(b, |b, flag| b.faust_arg(flag));
     b.build();
     debug_dsp.set_extension("xml");
 
