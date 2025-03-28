@@ -1,11 +1,9 @@
-use std::{thread, time::Duration};
-
 use faust_state::DspHandle;
 use jack_utils::run_dsp_as_jack_client;
+use std::{thread, time::Duration};
 
 faust_macro::faust!(
     declare flags       "-single"; // example for possible flags declaration use
-    declare architecture "faust-build/faust-template.rs"; // example of relative path to architecture file
     declare name        "VolumeControl"; //necessary declaration to have a valid name
     declare version     "1.0";
     declare author      "Franz Heinzmann";
@@ -49,7 +47,7 @@ fn main() {
         eprintln!("level:  {} dB", state.get_by_path("level").unwrap());
         volume += 10.;
         if volume > 4. {
-            volume = -70.
+            volume = -70.;
         }
         let _ = state.set_by_path("volume", volume);
         state.send();
@@ -59,3 +57,4 @@ fn main() {
     // Run the DSP as JACK client.
     run_dsp_as_jack_client(dsp);
 }
+

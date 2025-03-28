@@ -1,5 +1,5 @@
 use crate::dsp::Volume;
-use faust_types::{FaustDsp, ParamIndex};
+use faust_types::ParamIndex;
 pub mod dsp;
 
 fn main() {
