@@ -4,7 +4,7 @@ use serde::{Deserialize, Deserializer};
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct FaustJson {
+pub struct FaustDescriptionJson {
     pub name: String,
     pub filename: String,
     pub version: String,

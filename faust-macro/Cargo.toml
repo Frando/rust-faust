@@ -17,7 +17,7 @@ proc-macro = true
 #faust-build = { git = "http://github.com/Frando/rust-faust.git" }
 #faust-json = { git = "http://github.com/Frando/rust-faust.git" }
 faust-build.workspace = true
-faust-json.workspace = true
+faust-description-json.workspace = true
 faust-macro-lib.workspace = true
 
 tempfile.workspace = true

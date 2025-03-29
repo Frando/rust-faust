@@ -6,7 +6,7 @@
     // clippy::cargo
 )]
 
-use deserialize::FaustJson;
+use deserialize::FaustDescriptionJson;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use syn::Ident;
@@ -15,7 +15,7 @@ pub mod deserialize;
 pub mod enum_interface;
 pub mod struct_interface;
 
-impl FaustJson {
+impl FaustDescriptionJson {
     #[must_use]
     pub fn ui(&self, module_name: &Ident, struct_name: &Ident) -> (TokenStream, TokenStream) {
         let ui_static_name = format_ident!("UI");

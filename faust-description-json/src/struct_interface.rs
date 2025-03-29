@@ -4,7 +4,7 @@ use quote::{format_ident, quote};
 use syn::Ident;
 
 use crate::{
-    deserialize::{FaustJson, LayoutItem},
+    deserialize::{FaustDescriptionJson, LayoutItem},
     enum_interface,
 };
 
@@ -191,7 +191,11 @@ fn create_structs(si: &StructInfo) -> TokenStream {
     }
 }
 
-pub fn create(dsp_json: &FaustJson, ui_static_name: &Ident, ui_type: &Ident) -> TokenStream {
+pub fn create(
+    dsp_json: &FaustDescriptionJson,
+    ui_static_name: &Ident,
+    ui_type: &Ident,
+) -> TokenStream {
     let ui_info_tree = vec![StructInfo::GroupInfo {
         type_name: ui_type.clone(),
         label: ui_static_name.clone(),

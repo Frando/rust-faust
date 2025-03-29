@@ -29,11 +29,11 @@ use tempfile::NamedTempFile;
 pub fn build_dsp(dsp_file: &str) {
     let out_dir = env::var_os("OUT_DIR").expect("Environment Variable OUT_DIR is not defined");
     let dest_path = Path::new(&out_dir).join("dsp.rs");
-    FaustBuilder::new(dsp_file).build(dest_path);
+    FaustBuilder::new(dsp_file).build_to_out_file(dest_path);
 }
 
 pub fn build_dsp_to_destination(dsp_file: &str, dest_path: &str) {
-    FaustBuilder::new(dsp_file).build(dest_path);
+    FaustBuilder::new(dsp_file).build_to_out_file(dest_path);
 }
 
 #[derive(Default)]
@@ -232,10 +232,7 @@ impl FaustBuilder {
         command
     }
 
-    pub fn build(&mut self, out_file: impl Into<PathBuf>) {
-        let out_file: PathBuf = out_file.into();
-        let intermediate_out_file = NamedTempFile::new().expect("failed creating temporary file");
-
+    pub fn extra_args_for_to_out_file(&mut self, intermediate_out_file: PathBuf) -> Vec<FaustArg> {
         let (architecture_file_path, _temp_file) = match self
             .architecture
             .take()
@@ -262,47 +259,27 @@ impl FaustBuilder {
             }
         };
 
-        let extra_flags = vec![
-            FaustArg::OutPath(intermediate_out_file.path().to_path_buf()),
+        vec![
+            FaustArg::OutPath(intermediate_out_file),
             FaustArg::ArchFile(architecture_file_path.clone()),
-        ];
+        ]
+    }
 
-        let faust_output = self
-            .to_command(extra_flags)
-            .output()
-            .expect("Failed to execute command");
-        assert!(
-            faust_output.status.success(),
-            "faust compilation failed: {}",
-            String::from_utf8(faust_output.stderr).unwrap()
-        );
+    pub fn build_to_out_file(&mut self, out_file: impl Into<PathBuf>) {
+        let out_file: PathBuf = out_file.into();
 
-        let dsp_code = fs::read(intermediate_out_file).expect("Failed reading target file");
-        let dsp_code = String::from_utf8(dsp_code).expect("Failed reading target file as utf8");
-        let dsp_code = dsp_code.replace("<<moduleName>>", &self.module_name);
-        let dsp_code = dsp_code.replace("<<structName>>", &self.get_struct_name());
-
+        let dsp_code = self.build(vec![]);
         fs::write(&out_file, dsp_code).expect("failed to write to destination path");
 
         eprintln!("Wrote module:\n{}", out_file.to_str().unwrap());
     }
 
     #[must_use]
-    pub fn build_to_stdout(&self, extra_flags: Vec<FaustArg>) -> String {
-        let faust_output = self
-            .to_command(extra_flags)
-            .output()
-            .expect("Failed to execute command");
-        assert!(
-            faust_output.status.success(),
-            "faust compilation failed: {}",
-            String::from_utf8(faust_output.stderr).unwrap()
-        );
-        String::from_utf8(faust_output.stdout).expect("could not parse stdout from command")
-    }
-
-    pub fn build_xml(&self) {
-        let _ = self.build_to_stdout(vec![FaustArg::Xml()]);
+    pub fn build(&self, extra_flags: Vec<FaustArg>) -> String {
+        let dsp_code = run_faust_command(self.to_command(extra_flags));
+        let dsp_code = dsp_code.replace("<<moduleName>>", &self.module_name);
+        let dsp_code = dsp_code.replace("<<structName>>", &self.get_struct_name());
+        dsp_code
     }
 
     // pub fn build_xml_at_file(&self, out: &str) {
@@ -315,4 +292,14 @@ impl FaustBuilder {
     //         )
     //     });
     // }
+}
+
+pub fn run_faust_command(mut command: Command) -> String {
+    let faust_output = command.output().expect("Failed to execute command");
+    assert!(
+        faust_output.status.success(),
+        "faust compilation failed: {}",
+        String::from_utf8(faust_output.stderr).unwrap()
+    );
+    String::from_utf8(faust_output.stdout).expect("could not parse stdout from command")
 }

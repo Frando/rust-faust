@@ -1,5 +1,5 @@
 [package]
-name = "faust-json"
+name = "faust-description-json"
 version = "0.2.0"
 authors = ["crop2000"]
 edition = "2021"

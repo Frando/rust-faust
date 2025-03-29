@@ -11,8 +11,8 @@ readme = "../README.md"
 
 [features]
 default = ["codegen"]
-json = ["dep:faust-json", "dep:serde_json"]
-codegen = ["json", "dep:faust-json", "dep:proc-macro2", "dep:syn", "dep:quote", ]
+json = ["dep:faust-description-json", "dep:serde_json"]
+codegen = ["json", "dep:proc-macro2", "dep:syn", "dep:quote", ]
 
 [dependencies]
 tempfile.workspace = true
@@ -22,7 +22,7 @@ heck.workspace = true
 serde_json = { workspace = true, optional = true }
 
 # dependencies for codegen feature
-faust-json = { workspace = true, optional = true}
+faust-description-json = { workspace = true, optional = true}
 proc-macro2 = { workspace = true, optional = true}
 syn = { workspace = true, optional = true }
 quote = { workspace = true, optional = true }

@@ -1,12 +1,12 @@
 use std::fs;
 
-use faust_json::deserialize::FaustJson;
+use faust_description_json::deserialize::FaustDescriptionJson;
 
 use crate::{faust_arg::FaustArg, faust_utils, FaustBuilder};
 
 impl FaustBuilder {
-    pub fn build_json(&self) -> FaustJson {
-        let json = self.build_to_stdout(vec![FaustArg::Json()]);
+    pub fn description(&self) -> FaustDescriptionJson {
+        let json = self.build(vec![FaustArg::Json()]);
         serde_json::from_str(&json).expect("Failed parsing json")
     }
 

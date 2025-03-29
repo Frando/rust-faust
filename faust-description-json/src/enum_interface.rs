@@ -1,6 +1,6 @@
 use std::vec;
 
-use crate::deserialize::FaustJson;
+use crate::deserialize::FaustDescriptionJson;
 use crate::deserialize::LayoutItem;
 use heck::CamelCase;
 use proc_macro2::TokenStream;
@@ -97,7 +97,7 @@ trait GetParmInfo {
     fn get_param_info(&self) -> Vec<ParamInfo>;
 }
 
-impl GetParmInfo for FaustJson {
+impl GetParmInfo for FaustDescriptionJson {
     fn get_param_info(&self) -> Vec<ParamInfo> {
         self.ui
             .iter()
@@ -326,7 +326,7 @@ fn create_from_paraminfo(v: &[ParamInfo], dsp_name: &Ident) -> (TokenStream, boo
 }
 
 #[must_use]
-pub fn create(dsp_json: &FaustJson, dsp_name: &Ident) -> (TokenStream, bool, bool) {
+pub fn create(dsp_json: &FaustDescriptionJson, dsp_name: &Ident) -> (TokenStream, bool, bool) {
     let param_info = dsp_json.get_param_info();
     create_from_paraminfo(&param_info, dsp_name)
 }
