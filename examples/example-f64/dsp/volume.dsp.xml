@@ -1,6 +1,6 @@
 
 <faust>
-	<name>volumecontrol</name>
+	<name>volume</name>
 	<author>Franz Heinzmann</author>
 	<copyright></copyright>
 	<license>BSD</license>
@@ -25,7 +25,7 @@
 	<meta key="signals.lib/version">1.6.0</meta>
 	<ui>
 		<activewidgets>
-			<count>1</count>
+			<count>2</count>
 			<widget type="vslider" id="2">
 				<label>volume</label>
 				<varname>fVslider0</varname>
@@ -34,13 +34,30 @@
 				<max>4.0</max>
 				<step>0.1</step>
 			</widget>
+			<widget type="vslider" id="4">
+				<label>volume</label>
+				<varname>fVslider1</varname>
+				<init>0.0</init>
+				<min>-7e+01</min>
+				<max>4.0</max>
+				<step>0.1</step>
+			</widget>
 		</activewidgets>
 		
 		<passivewidgets>
-			<count>1</count>
+			<count>2</count>
 			<widget type="vbargraph" id="1">
 				<label>level</label>
 				<varname>fVbargraph0</varname>
+				<min>-6e+01</min>
+				<max>5.0</max>
+				<meta key="2"></meta>
+				<meta key="style">dB</meta>
+				<meta key="unit">dB</meta>
+			</widget>
+			<widget type="vbargraph" id="3">
+				<label>level</label>
+				<varname>fVbargraph1</varname>
 				<min>-6e+01</min>
 				<max>5.0</max>
 				<meta key="2"></meta>
@@ -56,8 +73,16 @@
 		<layout>
 			<group type="vgroup">
 				<label>0x00</label>
-				<widgetref id="1" />
-				<widgetref id="2" />
+				<group type="vgroup">
+					<label>channel_0</label>
+					<widgetref id="1" />
+					<widgetref id="2" />
+				</group>
+				<group type="vgroup">
+					<label>channel_1</label>
+					<widgetref id="3" />
+					<widgetref id="4" />
+				</group>
 			</group>
 		</layout>
 	</ui>

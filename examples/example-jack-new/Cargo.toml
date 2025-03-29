@@ -1,7 +1,8 @@
 [package]
-name = "example-f64"
+name = "example-jack-new"
 version = "0.1.0"
-edition = "2021"
+authors = ["Franz Heinzmann (Frando) <frando@unbiskant.org>"]
+edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -9,10 +10,15 @@ edition = "2021"
 default = ["default-boxed"]
 
 [dependencies]
-faust-types = { path = "../../faust-types" }
 default-boxed = { version = "*", optional = true}
+faust-types = { path = "../../faust-types" }
+faust-state = { path = "../../faust-state" }
+jack-utils = { path = "../jack-utils" }
+jack = "0.13"
+triple_buffer = "8.0.0"
 strum = "0.26.3"
-strum_macros = "0.26.4" # should be somehow automatically imported because of faust-json
+strum_macros = "0.26.4" # this should somehow be automatically passed from faust-json
+
 
 [build-dependencies]
 faust-build = { path = "../../faust-build" }
@@ -21,4 +27,5 @@ serde_json = "*"
 quote = "^1.0"
 prettyplease = "^0.2"
 syn = "^2.0"
+tempfile = "3.2.0"
 proc-macro2 = "*"

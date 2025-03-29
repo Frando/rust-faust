@@ -8,43 +8,38 @@ mod dsp {
     #![allow(unused_mut)]
     #![allow(non_upper_case_globals)]
     use faust_types::*;
-    pub type FaustFloat = F64;
+    pub type FaustFloat = F32;
     mod ffi {
-        use std::os::raw::c_double;
+        use std::os::raw::c_float;
         #[cfg_attr(not(target_os = "windows"), link(name = "m"))]
-        extern {
-            pub fn remainder(from: c_double, to: c_double) -> c_double;
-            pub fn rint(val: c_double) -> c_double;
+        extern "C" {
+            pub fn remainderf(from: c_float, to: c_float) -> c_float;
+            pub fn rintf(val: c_float) -> c_float;
         }
     }
-    fn remainder_f64(from: f64, to: f64) -> f64 {
-        unsafe { ffi::remainder(from, to) }
+    fn remainder_f32(from: f32, to: f32) -> f32 {
+        unsafe { ffi::remainderf(from, to) }
     }
-    fn rint_f64(val: f64) -> f64 {
-        unsafe { ffi::rint(val) }
+    fn rint_f32(val: f32) -> f32 {
+        unsafe { ffi::rintf(val) }
     }
     pub const FAUST_INPUTS: usize = 2;
     pub const FAUST_OUTPUTS: usize = 2;
-    pub const FAUST_ACTIVES: usize = 2;
-    pub const FAUST_PASSIVES: usize = 2;
+    pub const FAUST_ACTIVES: usize = 1;
+    pub const FAUST_PASSIVES: usize = 1;
     #[cfg_attr(feature = "default-boxed", derive(default_boxed::DefaultBoxed))]
     #[repr(C)]
     pub struct Volume {
         fSampleRate: i32,
-        fConst0: F64,
-        fConst1: F64,
-        fConst2: F64,
-        fConst3: F64,
-        fVslider0: F64,
-        fRec1: [F64; 2],
-        fRec0: [F64; 2],
-        fVbargraph0: F64,
-        iConst4: i32,
-        fVslider1: F64,
-        fRec3: [F64; 2],
-        fRec2: [F64; 2],
-        fVbargraph1: F64,
-        iConst5: i32,
+        fConst0: F32,
+        fConst1: F32,
+        fConst2: F32,
+        fVslider0: F32,
+        fRec0: [F32; 2],
+        fConst3: F32,
+        fRec1: [F32; 2],
+        fVbargraph0: F32,
+        fConst4: F32,
     }
     impl Volume {
         pub fn new() -> Volume {
@@ -53,17 +48,12 @@ mod dsp {
                 fConst0: 0.0,
                 fConst1: 0.0,
                 fConst2: 0.0,
-                fConst3: 0.0,
                 fVslider0: 0.0,
-                fRec1: [0.0; 2],
                 fRec0: [0.0; 2],
+                fConst3: 0.0,
+                fRec1: [0.0; 2],
                 fVbargraph0: 0.0,
-                iConst4: 0,
-                fVslider1: 0.0,
-                fRec3: [0.0; 2],
-                fRec2: [0.0; 2],
-                fVbargraph1: 0.0,
-                iConst5: 0,
+                fConst4: 0.0,
             }
         }
         pub fn metadata(&self, m: &mut dyn Meta) {
@@ -76,7 +66,7 @@ mod dsp {
             m.declare("basics.lib/version", r"1.21.0");
             m.declare(
                 "compile_options",
-                r"-lang rust -ct 1 -cn Volume -es 1 -mcd 16 -mdd 1024 -mdy 33 -double -ftz 0",
+                r"-lang rust -ct 1 -cn Volume -es 1 -mcd 16 -mdd 1024 -mdy 33 -single -ftz 0",
             );
             m.declare("filename", r"volume.dsp");
             m.declare("license", r"BSD");
@@ -85,7 +75,7 @@ mod dsp {
             m.declare("maths.lib/license", r"LGPL with exception");
             m.declare("maths.lib/name", r"Faust Math Library");
             m.declare("maths.lib/version", r"2.8.1");
-            m.declare("name", r"volume");
+            m.declare("name", r"volumecontrol");
             m.declare("options", r"[osc:on]");
             m.declare("platform.lib/name", r"Generic Platform Library");
             m.declare("platform.lib/version", r"1.3.0");
@@ -99,30 +89,22 @@ mod dsp {
         pub fn class_init(sample_rate: i32) {}
         pub fn instance_reset_params(&mut self) {
             self.fVslider0 = 0.0;
-            self.fVslider1 = 0.0;
         }
         pub fn instance_clear(&mut self) {
             for l0 in 0..2 {
-                self.fRec1[l0 as usize] = 0.0;
+                self.fRec0[l0 as usize] = 0.0;
             }
             for l1 in 0..2 {
-                self.fRec0[l1 as usize] = 0.0;
-            }
-            for l2 in 0..2 {
-                self.fRec3[l2 as usize] = 0.0;
-            }
-            for l3 in 0..2 {
-                self.fRec2[l3 as usize] = 0.0;
+                self.fRec1[l1 as usize] = 0.0;
             }
         }
         pub fn instance_constants(&mut self, sample_rate: i32) {
             self.fSampleRate = sample_rate;
-            self.fConst0 = F64::min(1.92e+05, F64::max(1.0, (self.fSampleRate) as F64));
-            self.fConst1 = 1.0 / self.fConst0;
-            self.fConst2 = 44.1 / self.fConst0;
-            self.fConst3 = 1.0 - self.fConst2;
-            self.iConst4 = 0;
-            self.iConst5 = 0;
+            self.fConst0 = F32::min(1.92e+05, F32::max(1.0, (self.fSampleRate) as F32));
+            self.fConst1 = 44.1 / self.fConst0;
+            self.fConst2 = 1.0 - self.fConst1;
+            self.fConst3 = 1.0 / self.fConst0;
+            self.fConst4 = (0) as F32;
         }
         pub fn instance_init(&mut self, sample_rate: i32) {
             self.instance_constants(sample_rate);
@@ -137,8 +119,7 @@ mod dsp {
             Self::build_user_interface_static(ui_interface);
         }
         pub fn build_user_interface_static(ui_interface: &mut dyn UI<FaustFloat>) {
-            ui_interface.open_vertical_box("volume");
-            ui_interface.open_vertical_box("channel_0");
+            ui_interface.open_vertical_box("volumecontrol");
             ui_interface.declare(Some(ParamIndex(0)), "2", "");
             ui_interface.declare(Some(ParamIndex(0)), "style", "dB");
             ui_interface.declare(Some(ParamIndex(0)), "unit", "dB");
@@ -146,31 +127,18 @@ mod dsp {
             ui_interface
                 .add_vertical_slider("volume", ParamIndex(1), 0.0, -7e+01, 4.0, 0.1);
             ui_interface.close_box();
-            ui_interface.open_vertical_box("channel_1");
-            ui_interface.declare(Some(ParamIndex(2)), "2", "");
-            ui_interface.declare(Some(ParamIndex(2)), "style", "dB");
-            ui_interface.declare(Some(ParamIndex(2)), "unit", "dB");
-            ui_interface.add_vertical_bargraph("level", ParamIndex(2), -6e+01, 5.0);
-            ui_interface
-                .add_vertical_slider("volume", ParamIndex(3), 0.0, -7e+01, 4.0, 0.1);
-            ui_interface.close_box();
-            ui_interface.close_box();
         }
         pub fn get_param(&self, param: ParamIndex) -> Option<FaustFloat> {
             match param.0 {
                 0 => Some(self.fVbargraph0),
-                2 => Some(self.fVbargraph1),
                 1 => Some(self.fVslider0),
-                3 => Some(self.fVslider1),
                 _ => None,
             }
         }
         pub fn set_param(&mut self, param: ParamIndex, value: FaustFloat) {
             match param.0 {
                 0 => self.fVbargraph0 = value,
-                2 => self.fVbargraph1 = value,
                 1 => self.fVslider0 = value,
-                3 => self.fVslider1 = value,
                 _ => {}
             }
         }
@@ -190,40 +158,24 @@ mod dsp {
             };
             let outputs0 = outputs0.as_mut()[..count].iter_mut();
             let outputs1 = outputs1.as_mut()[..count].iter_mut();
-            let mut fSlow0: F64 = self.fConst2 * F64::powf(1e+01, 0.05 * self.fVslider0);
-            let mut fSlow1: F64 = self.fConst2 * F64::powf(1e+01, 0.05 * self.fVslider1);
+            let mut fSlow0: F32 = self.fConst1 * F32::powf(1e+01, 0.05 * self.fVslider0);
             let zipped_iterators = inputs0.zip(inputs1).zip(outputs0).zip(outputs1);
             for (((input0, input1), output0), output1) in zipped_iterators {
-                self.fRec1[0] = fSlow0 + self.fConst3 * self.fRec1[1];
-                self.fRec0[0] = F64::max(
-                    self.fRec0[1] - self.fConst1,
-                    F64::abs(*input0 * self.fRec1[0]),
+                self.fRec0[0] = fSlow0 + self.fConst2 * self.fRec0[1];
+                let mut fTemp0: F32 = *input0;
+                let mut fTemp1: F32 = *input1;
+                self.fRec1[0] = F32::max(
+                    self.fRec1[1] - self.fConst3,
+                    F32::abs(0.5 * self.fRec0[0] * (fTemp0 + fTemp1)),
                 );
                 self.fVbargraph0 = 2e+01
-                    * F64::log10(
-                        F64::max(
-                            2.2250738585072014e-308,
-                            F64::max(0.00031622776601683794, self.fRec0[0]),
-                        ),
+                    * F32::log10(
+                        F32::max(1.1754944e-38, F32::max(0.00031622776, self.fRec1[0])),
                     );
-                *output0 = (self.iConst4) as F64;
-                self.fRec3[0] = fSlow1 + self.fConst3 * self.fRec3[1];
-                self.fRec2[0] = F64::max(
-                    self.fRec2[1] - self.fConst1,
-                    F64::abs(*input1 * self.fRec3[0]),
-                );
-                self.fVbargraph1 = 2e+01
-                    * F64::log10(
-                        F64::max(
-                            2.2250738585072014e-308,
-                            F64::max(0.00031622776601683794, self.fRec2[0]),
-                        ),
-                    );
-                *output1 = (self.iConst5) as F64;
-                self.fRec1[1] = self.fRec1[0];
+                *output0 = self.fConst4 + fTemp0 * self.fRec0[0];
+                *output1 = fTemp1 * self.fRec0[0];
                 self.fRec0[1] = self.fRec0[0];
-                self.fRec3[1] = self.fRec3[0];
-                self.fRec2[1] = self.fRec2[0];
+                self.fRec1[1] = self.fRec1[0];
             }
         }
     }
@@ -310,37 +262,32 @@ mod dsp {
         derive(Display, EnumIter, EnumCount, VariantArray, VariantNames, Hash)
     )]
     pub enum UIActiveValue {
-        Channel0Volume(FaustFloat),
-        Channel1Volume(FaustFloat),
+        Volume(FaustFloat),
     }
     pub type UIActive = UIActiveValueDiscriminants;
     impl UISelfSet<Volume, FaustFloat> for UIActiveValue {
         fn set(&self, dsp: &mut Volume) {
             match self {
-                UIActiveValue::Channel0Volume(value) => dsp.fVslider0 = *value,
-                UIActiveValue::Channel1Volume(value) => dsp.fVslider1 = *value,
+                UIActiveValue::Volume(value) => dsp.fVslider0 = *value,
             }
         }
         fn get(&self) -> FaustFloat {
             match self {
-                UIActiveValue::Channel0Volume(value) => *value,
-                UIActiveValue::Channel1Volume(value) => *value,
+                UIActiveValue::Volume(value) => *value,
             }
         }
     }
     impl UISet<Volume, FaustFloat> for UIActive {
         fn set(&self, dsp: &mut Volume, value: FaustFloat) {
             match self {
-                UIActive::Channel0Volume => dsp.fVslider0 = value,
-                UIActive::Channel1Volume => dsp.fVslider1 = value,
+                UIActive::Volume => dsp.fVslider0 = value,
             }
         }
     }
     impl UIActive {
         pub fn value(&self, value: FaustFloat) -> UIActiveValue {
             match self {
-                UIActive::Channel0Volume => UIActiveValue::Channel0Volume(value),
-                UIActive::Channel1Volume => UIActiveValue::Channel1Volume(value),
+                UIActive::Volume => UIActiveValue::Volume(value),
             }
         }
     }
@@ -359,8 +306,7 @@ mod dsp {
         derive(Display, EnumIter, EnumCount, VariantArray, VariantNames, Hash)
     )]
     pub enum UIPassiveValue {
-        Channel0Level(FaustFloat),
-        Channel1Level(FaustFloat),
+        Level(FaustFloat),
     }
     pub type UIPassive = UIPassiveValueDiscriminants;
     impl UIGet<Volume> for UIPassive {
@@ -368,76 +314,43 @@ mod dsp {
         type F = FaustFloat;
         fn get_value(&self, dsp: &Volume) -> Self::F {
             match self {
-                UIPassive::Channel0Level => dsp.fVbargraph0,
-                UIPassive::Channel1Level => dsp.fVbargraph1,
+                UIPassive::Level => dsp.fVbargraph0,
             }
         }
         fn get_enum(&self, dsp: &Volume) -> Self::E {
             match self {
-                UIPassive::Channel0Level => {
-                    UIPassiveValue::Channel0Level(dsp.fVbargraph0)
-                }
-                UIPassive::Channel1Level => {
-                    UIPassiveValue::Channel1Level(dsp.fVbargraph1)
-                }
+                UIPassive::Level => UIPassiveValue::Level(dsp.fVbargraph0),
             }
         }
     }
     impl UIPassive {
         pub fn value(&self, value: FaustFloat) -> UIPassiveValue {
             match self {
-                UIPassive::Channel0Level => UIPassiveValue::Channel0Level(value),
-                UIPassive::Channel1Level => UIPassiveValue::Channel1Level(value),
+                UIPassive::Level => UIPassiveValue::Level(value),
             }
         }
     }
     #[derive(Debug)]
     pub struct NewUI {
-        pub volume: NewUIVolume,
+        pub volumecontrol: NewUIVolumecontrol,
     }
     impl NewUI {
         const fn static_ui() -> Self {
             Self {
-                volume: NewUIVolume::static_ui(),
+                volumecontrol: NewUIVolumecontrol::static_ui(),
             }
         }
     }
     #[derive(Debug)]
-    pub struct NewUIVolume {
-        pub channel_0: NewUIVolumeChannel0,
-        pub channel_1: NewUIVolumeChannel1,
-    }
-    impl NewUIVolume {
-        const fn static_ui() -> Self {
-            Self {
-                channel_0: NewUIVolumeChannel0::static_ui(),
-                channel_1: NewUIVolumeChannel1::static_ui(),
-            }
-        }
-    }
-    #[derive(Debug)]
-    pub struct NewUIVolumeChannel0 {
+    pub struct NewUIVolumecontrol {
         pub level: UIPassive,
         pub volume: UIActive,
     }
-    impl NewUIVolumeChannel0 {
+    impl NewUIVolumecontrol {
         const fn static_ui() -> Self {
             Self {
-                level: UIPassive::Channel0Level,
-                volume: UIActive::Channel0Volume,
-            }
-        }
-    }
-    #[derive(Debug)]
-    pub struct NewUIVolumeChannel1 {
-        pub level: UIPassive,
-        pub volume: UIActive,
-    }
-    impl NewUIVolumeChannel1 {
-        const fn static_ui() -> Self {
-            Self {
-                level: UIPassive::Channel1Level,
-                volume: UIActive::Channel1Volume,
+                level: UIPassive::Level,
+                volume: UIActive::Volume,
             }
         }
     }

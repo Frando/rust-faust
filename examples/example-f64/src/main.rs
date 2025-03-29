@@ -1,10 +1,15 @@
-use crate::dsp::Volume;
-use faust_types::{FaustDsp, ParamIndex};
+use dsp::{UIActive, UIActiveValue, UIPassive, Volume, UI};
+use faust_types::{UIGet, UISelfSet, UISet};
 pub mod dsp;
 
 fn main() {
-    println!("Hello, world!");
     let mut dsp = Volume::new();
     dsp.init(44_100);
-    dsp.set_param(ParamIndex(0), 10.0_f64);
+    UIActive::Channel0Volume.set(&mut dsp, 1.0f64);
+    UIActiveValue::Channel1Volume(10.0f64).set(&mut dsp);
+    let ib = [[1.0f64], [10.0f64]];
+    let mut ob = [[0f64], [0f64]];
+    dsp.compute(1, &ib, &mut ob);
+    println!("{:?}", UIPassive::Channel0Level.get_enum(&dsp));
+    println!("{}", UI.volume.channel_1.level.get_value(&dsp));
 }
