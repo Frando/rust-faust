@@ -8,8 +8,10 @@
 #![allow(clippy::missing_panics_doc)]
 
 use faust_build::{
-    faust_arg::{FaustArg, FaustArgsToCommandArgs},
+    codegen::{get_flags_token, get_name_token},
+    faust_arg::FaustArg,
     faust_utils::json_path_from_dsp_path,
+    FaustBuilder,
 };
 use faust_json::deserialize::FaustJson;
 use quote::{format_ident, quote};
@@ -17,54 +19,9 @@ use std::{
     fs::{self, File},
     io::{BufReader, BufWriter, Write},
     path::Path,
-    process::Command,
 };
 use syn::{parse_str, Ident};
 use tempfile::NamedTempFile;
-
-fn strip_quotes(name: &proc_macro2::TokenTree) -> String {
-    name.to_string()
-        .strip_prefix('\"')
-        .expect("prefix is not \"")
-        .strip_suffix('\"')
-        .expect("postfix is not \"")
-        .to_string()
-}
-
-fn get_declared_value(key: &str, ts: proc_macro2::TokenStream) -> Option<String> {
-    // find the token that declares a key in the dsp file
-    let mut ii = ts.into_iter();
-    while let Some(n) = ii.next() {
-        if n.to_string() == "declare" {
-            if let Some(n) = ii.next() {
-                if n.to_string() == key {
-                    if let Some(value) = ii.next() {
-                        if let Some(semicolon) = ii.next() {
-                            if semicolon.to_string() == ";" {
-                                return Some(strip_quotes(&value));
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-    None
-}
-
-#[must_use]
-pub fn get_name_token(ts: proc_macro2::TokenStream) -> String {
-    get_declared_value("name", ts)
-        .expect("name declaration is not found.\n Expect 'declare name NAMESTRING;' in faust code.")
-}
-
-pub fn get_flags_token(ts: proc_macro2::TokenStream) -> Vec<String> {
-    get_declared_value("flags", ts).map_or_else(std::vec::Vec::new, |s| {
-        s.split_whitespace()
-            .map(std::borrow::ToOwned::to_owned)
-            .collect()
-    })
-}
 
 #[must_use]
 pub fn write_temp_dsp_file(faust_code: &str) -> NamedTempFile {
@@ -73,28 +30,6 @@ pub fn write_temp_dsp_file(faust_code: &str) -> NamedTempFile {
     f.write_all(faust_code.as_bytes())
         .expect("Unable to write to temp dsp file");
     f.into_inner().expect("temp dsp error on flush")
-}
-
-pub fn faust_command(
-    temp_dsp_path: &Path,
-    struct_name: &impl ToString,
-    flags: &[impl ToString],
-) -> Command {
-    let mut args: Vec<FaustArg> = vec![
-        FaustArg::default_lang(),
-        FaustArg::default_timeout(),
-        FaustArg::DebugWarnings,
-        FaustArg::StructName(struct_name.to_string()),
-        FaustArg::Json(),
-        FaustArg::DspPath(temp_dsp_path.to_path_buf()),
-    ];
-    for arg in flags {
-        args.push(FaustArg::Custom(arg.to_string()));
-    }
-
-    let mut faust = Command::new("faust");
-    faust.args(args.to_command_args());
-    faust
 }
 
 #[must_use]
@@ -198,21 +133,17 @@ pub fn faust_build(input: &proc_macro2::TokenStream) -> proc_macro2::TokenStream
     write_debug_dsp_file(&name, temp_dsp_path);
 
     let flags = get_flags_token(input.clone());
-    let mut faust = faust_command(temp_dsp_path, &name, &flags);
-    let faust_result = faust.output().expect("Failed to execute faust");
-    assert!(
-        faust_result.status.success(),
-        "faust compilation failed: {}",
-        String::from_utf8(faust_result.stderr).unwrap()
-    );
-    write_debug_json_file(&name, temp_json_path);
-    let stderr = String::from_utf8(faust_result.stderr).unwrap();
-    assert!(
-        !stderr.contains("WARNING"),
-        "Fail on warning in stderr: \n{stderr}"
-    );
+    let dsp_code = FaustBuilder::new(temp_dsp_path)
+        .args([
+            FaustArg::DebugWarnings,
+            FaustArg::StructName(struct_name.to_string()),
+        ])
+        .args(flags)
+        .build_json();
 
-    let dsp_code = parse_dsp_code(&name, faust_result.stdout);
+    write_debug_json_file(&name, temp_json_path);
+
+    let dsp_code = parse_dsp_code(&name, dsp_code.into_bytes());
     let (ui_code, ui_reexport) = get_ui_from_json(temp_json_path, &module_name, &struct_name);
 
     architecture(

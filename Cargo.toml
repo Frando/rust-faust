@@ -13,3 +13,6 @@ members = [
   "examples/example-f64",
 ]
 resolver="2"
+
+[workspace.dependencies]
+faust-json.path = "./faust-json"

@@ -12,29 +12,30 @@
 pub mod faust_arg;
 pub mod faust_utils;
 
+#[cfg(feature = "codegen")]
+pub mod codegen;
+
 use faust_arg::{FaustArg, FaustArgsToCommandArgs};
 use std::{
     env, fs,
     path::{Path, PathBuf},
     process::Command,
-    vec,
 };
 use tempfile::NamedTempFile;
 
 pub fn build_dsp(dsp_file: &str) {
     let out_dir = env::var_os("OUT_DIR").expect("Environment Variable OUT_DIR is not defined");
     let dest_path = Path::new(&out_dir).join("dsp.rs");
-    FaustBuilder::new(dsp_file, dest_path).build();
+    FaustBuilder::new(dsp_file).build(dest_path);
 }
 
 pub fn build_dsp_to_destination(dsp_file: &str, dest_path: &str) {
-    FaustBuilder::new(dsp_file, dest_path).build();
+    FaustBuilder::new(dsp_file).build(dest_path);
 }
 
 pub struct FaustBuilder {
     faust_path: Option<PathBuf>,
     in_file: PathBuf,
-    out_file: PathBuf,
     arch_file: Option<PathBuf>,
     /// Module name the dsp code will be encapsulated in. By default is "dsp".
     module_name: String,
@@ -49,7 +50,6 @@ impl Default for FaustBuilder {
         Self {
             faust_path: None,
             in_file: "".into(),
-            out_file: "".into(),
             arch_file: None,
             struct_name: None,
             module_name: "dsp".into(),
@@ -60,10 +60,9 @@ impl Default for FaustBuilder {
 }
 
 impl FaustBuilder {
-    pub fn new(in_file: impl Into<PathBuf>, out_file: impl Into<PathBuf>) -> Self {
+    pub fn new(in_file: impl Into<PathBuf>) -> Self {
         Self {
             in_file: in_file.into(),
-            out_file: out_file.into(),
             ..Default::default()
         }
     }
@@ -98,8 +97,21 @@ impl FaustBuilder {
 
     /// Add additionals args to the faust build command
     #[must_use]
-    pub fn faust_arg(mut self, arg: impl Into<FaustArg>) -> Self {
+    #[deprecated(note = "please use `arg` instead")]
+    pub fn faust_arg(self, arg: impl Into<FaustArg>) -> Self {
+        self.arg(arg)
+    }
+
+    #[must_use]
+    pub fn arg(mut self, arg: impl Into<FaustArg>) -> Self {
         self.faust_args.push(arg.into());
+        self
+    }
+
+    #[must_use]
+    pub fn args<T: Into<FaustArg> + Clone>(mut self, args: impl AsRef<[T]>) -> Self {
+        self.faust_args
+            .extend(args.as_ref().iter().map(|a| a.to_owned().into()));
         self
     }
 
@@ -142,26 +154,46 @@ impl FaustBuilder {
         args
     }
 
-    pub fn build(&self) {
-        let target_file = NamedTempFile::new().expect("failed creating temporary file");
+    pub fn faust_command_path(&self) -> PathBuf {
+        self.faust_path.clone().unwrap_or("faust".into())
+    }
 
-        let extra_flags = vec![FaustArg::OutPath(target_file.path().to_path_buf())];
-        let mut args = self.to_faust_args(extra_flags);
+    pub fn to_command(&self, extra_flags: Vec<FaustArg>) -> Command {
+        let args = self.to_faust_args(extra_flags);
 
-        // keep this block until we remove use of architecture files in the examples
-        let default_arch = NamedTempFile::new().expect("failed creating temporary file");
-        let template_code = include_str!("../faust-template.rs");
-        fs::write(default_arch.path(), template_code).expect("failed writing temporary file");
-        let default_template = &default_arch.path().into();
-        let template_file = self
-            .arch_file
-            .as_ref()
-            .map_or(default_template, |arch_file| arch_file);
-        args.push(FaustArg::ArchFile(template_file.clone()));
+        let faust_path = self.faust_command_path();
 
-        let faust_path = self.faust_path.clone().unwrap_or("faust".into());
-        let faust_output = Command::new(faust_path)
-            .args(args.to_command_args())
+        let mut command = Command::new(faust_path);
+        command.args(args.to_command_args());
+        command
+    }
+
+    pub fn build(&self, out_file: impl Into<PathBuf>) {
+        let out_file: PathBuf = out_file.into();
+        let intermediate_out_file = NamedTempFile::new().expect("failed creating temporary file");
+
+        let (architecture_file_path, _temp_file) = match self.arch_file.to_owned() {
+            Some(arch_file) => (arch_file, None),
+            None => {
+                let default_arch_tempfile =
+                    NamedTempFile::new().expect("failed creating temporary file");
+                let default_template_code = include_str!("../faust-template.rs");
+                fs::write(default_arch_tempfile.path(), default_template_code)
+                    .expect("failed writing temporary file");
+                (
+                    default_arch_tempfile.path().into(),
+                    Some(default_arch_tempfile),
+                )
+            }
+        };
+
+        let extra_flags = vec![
+            FaustArg::OutPath(intermediate_out_file.path().to_path_buf()),
+            FaustArg::ArchFile(architecture_file_path.clone()),
+        ];
+
+        let faust_output = self
+            .to_command(extra_flags)
             .output()
             .expect("Failed to execute command");
         assert!(
@@ -170,24 +202,20 @@ impl FaustBuilder {
             String::from_utf8(faust_output.stderr).unwrap()
         );
 
-        let dsp_code = fs::read(target_file).unwrap();
-        let dsp_code = String::from_utf8(dsp_code).unwrap();
+        let dsp_code = fs::read(intermediate_out_file).expect("Failed reading target file");
+        let dsp_code = String::from_utf8(dsp_code).expect("Failed reading target file as utf8");
         let dsp_code = dsp_code.replace("<<moduleName>>", &self.module_name);
         let dsp_code = dsp_code.replace("<<structName>>", &self.get_struct_name());
 
-        let dest_path = &self.out_file;
-        fs::write(dest_path, dsp_code).expect("failed to write to destination path");
+        fs::write(&out_file, dsp_code).expect("failed to write to destination path");
 
-        eprintln!("Wrote module:\n{}", dest_path.to_str().unwrap());
+        eprintln!("Wrote module:\n{}", out_file.to_str().unwrap());
     }
 
     #[must_use]
     pub fn build_to_stdout(&self, extra_flags: Vec<FaustArg>) -> String {
-        let args = self.to_faust_args(extra_flags);
-        let faust_path = self.faust_path.clone().unwrap_or("faust".into());
-
-        let faust_output = Command::new(faust_path)
-            .args(args.to_command_args())
+        let faust_output = self
+            .to_command(extra_flags)
             .output()
             .expect("Failed to execute command");
         assert!(
@@ -213,8 +241,8 @@ impl FaustBuilder {
         });
     }
 
-    pub fn build_json(&self) {
-        let _ = self.build_to_stdout(vec![FaustArg::Json()]);
+    pub fn build_json(&self) -> String {
+        self.build_to_stdout(vec![FaustArg::Json()])
     }
 
     pub fn build_json_at_file(&self, out: &str) {
