@@ -16,13 +16,13 @@ proc-macro = true
 [dependencies]
 #faust-build = { git = "http://github.com/Frando/rust-faust.git" }
 #faust-json = { git = "http://github.com/Frando/rust-faust.git" }
-faust-build = { path = "../faust-build" }
-faust-json =  { path = "../faust-json" }
-faust-macro-lib =  { path = "../faust-macro-lib" }
+faust-build.workspace = true
+faust-json.workspace = true
+faust-macro-lib.workspace = true
 
-tempfile = "3.2"
-prettyplease = "^0.2"
-syn = "^2.0"
-proc-macro2 = "*"
-quote = "^1.0"
-serde_json = "*"
+tempfile.workspace = true
+prettyplease.workspace = true
+syn.workspace = true
+proc-macro2.workspace = true
+quote.workspace = true
+serde_json.workspace = true

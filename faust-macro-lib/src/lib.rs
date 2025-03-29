@@ -107,15 +107,10 @@ pub fn parse_dsp_code(name: &str, stdout: Vec<u8>) -> proc_macro2::TokenStream {
 }
 
 fn get_ui_from_json(
-    temp_json_path: &Path,
+    faust_json: FaustJson,
     module_name: &Ident,
     struct_name: &Ident,
 ) -> (proc_macro2::TokenStream, proc_macro2::TokenStream) {
-    let json_file = File::open(temp_json_path).expect("Failed to open json file");
-    let json_reader = BufReader::new(json_file);
-    let faust_json: FaustJson = serde_json::from_reader(json_reader).unwrap_or_else(|err| {
-        panic!("json parsing error: {err}");
-    });
     faust_json.ui(module_name, struct_name)
 }
 

@@ -15,6 +15,9 @@ pub mod faust_utils;
 #[cfg(feature = "codegen")]
 pub mod codegen;
 
+#[cfg(feature = "codegen")]
+pub mod json;
+
 use faust_arg::{FaustArg, FaustArgsToCommandArgs};
 use std::{
     env, fs,
@@ -33,28 +36,49 @@ pub fn build_dsp_to_destination(dsp_file: &str, dest_path: &str) {
     FaustBuilder::new(dsp_file).build(dest_path);
 }
 
+#[derive(Default)]
+pub enum Architecture {
+    #[default]
+    Default,
+    File(PathBuf),
+    #[cfg(feature = "codegen")]
+    Fn(Box<dyn Fn(&mut FaustBuilder) -> proc_macro2::TokenStream>),
+}
+
+pub enum Input {
+    File(PathBuf),
+    String(String),
+}
+
+impl Default for Input {
+    fn default() -> Self {
+        Input::String("".into())
+    }
+}
+
 pub struct FaustBuilder {
     faust_path: Option<PathBuf>,
-    in_file: PathBuf,
-    arch_file: Option<PathBuf>,
+    input: Input,
     /// Module name the dsp code will be encapsulated in. By default is "dsp".
     module_name: String,
     /// Name for the DSP struct. If None, we use camel cased file name.
     struct_name: Option<String>,
     use_double: bool,
     faust_args: Vec<FaustArg>,
+
+    architecture: Option<Architecture>,
 }
 
 impl Default for FaustBuilder {
     fn default() -> Self {
         Self {
             faust_path: None,
-            in_file: "".into(),
-            arch_file: None,
+            input: Input::default(),
             struct_name: None,
             module_name: "dsp".into(),
             use_double: false,
             faust_args: vec![],
+            architecture: Some(Architecture::Default),
         }
     }
 }
@@ -62,7 +86,14 @@ impl Default for FaustBuilder {
 impl FaustBuilder {
     pub fn new(in_file: impl Into<PathBuf>) -> Self {
         Self {
-            in_file: in_file.into(),
+            input: Input::File(in_file.into()),
+            ..Default::default()
+        }
+    }
+
+    pub fn new_from_string(code: String) -> Self {
+        Self {
+            input: Input::String(code),
             ..Default::default()
         }
     }
@@ -90,8 +121,28 @@ impl FaustBuilder {
         self
     }
     #[must_use]
-    pub fn set_arch_file(mut self, arch_file: impl Into<PathBuf>) -> Self {
-        self.arch_file = Some(arch_file.into());
+    #[deprecated(note = "please use `set_architecture_file`")]
+    pub fn set_arch_file(self, arch_file: impl Into<PathBuf>) -> Self {
+        self.set_architecture_file(arch_file)
+    }
+
+    #[must_use]
+    pub fn set_architecture_file(mut self, arch_file: impl Into<PathBuf>) -> Self {
+        self.architecture = Some(Architecture::File(arch_file.into()));
+        self
+    }
+
+    #[must_use]
+    pub fn set_default_architecture(mut self) -> Self {
+        self.architecture = Some(Architecture::Default);
+        self
+    }
+
+    pub fn set_architecture_fn(
+        mut self,
+        architecture_fn: impl Fn(&mut FaustBuilder) -> proc_macro2::TokenStream + 'static,
+    ) -> Self {
+        self.architecture = Some(Architecture::Fn(Box::new(architecture_fn)));
         self
     }
 
@@ -123,7 +174,10 @@ impl FaustBuilder {
     #[must_use]
     pub fn get_struct_name(&self) -> String {
         self.struct_name.as_ref().map_or_else(
-            || faust_utils::struct_name_from_dsp_path(&self.in_file),
+            || match &self.input {
+                Input::File(path) => faust_utils::struct_name_from_dsp_path(&path),
+                Input::String(_) => todo!(),
+            },
             |struct_name| (*struct_name).clone(),
         )
     }
@@ -146,11 +200,21 @@ impl FaustBuilder {
             args.push(arg.clone());
         }
 
-        args.push(FaustArg::DspPath(self.in_file.clone()));
+        let dsp_path = match &self.input {
+            Input::File(path_buf) => path_buf.to_owned(),
+            Input::String(code) => {
+                let input_tempfile = NamedTempFile::new()
+                    .expect("failed creating temporary file")
+                    .keep()
+                    .expect("Failed marking the temp file as `keep`")
+                    .1;
+                fs::write(&input_tempfile, code).expect("failed writing temporary file");
+                input_tempfile
+            }
+        };
+        args.push(FaustArg::DspPath(dsp_path));
 
-        for arg in extra_flags {
-            args.push(arg);
-        }
+        args.extend(extra_flags);
         args
     }
 
@@ -168,13 +232,16 @@ impl FaustBuilder {
         command
     }
 
-    pub fn build(&self, out_file: impl Into<PathBuf>) {
+    pub fn build(&mut self, out_file: impl Into<PathBuf>) {
         let out_file: PathBuf = out_file.into();
         let intermediate_out_file = NamedTempFile::new().expect("failed creating temporary file");
 
-        let (architecture_file_path, _temp_file) = match self.arch_file.to_owned() {
-            Some(arch_file) => (arch_file, None),
-            None => {
+        let (architecture_file_path, _temp_file) = match self
+            .architecture
+            .take()
+            .expect("Architecture already taken. Did you call `build` twice?")
+        {
+            Architecture::Default => {
                 let default_arch_tempfile =
                     NamedTempFile::new().expect("failed creating temporary file");
                 let default_template_code = include_str!("../faust-template.rs");
@@ -184,6 +251,14 @@ impl FaustBuilder {
                     default_arch_tempfile.path().into(),
                     Some(default_arch_tempfile),
                 )
+            }
+            Architecture::File(path_buf) => (path_buf.to_owned(), None),
+            Architecture::Fn(architecture_fn) => {
+                let arch_tempfile = NamedTempFile::new().expect("failed creating temporary file");
+                let architecture_code = architecture_fn(self);
+                fs::write(arch_tempfile.path(), architecture_code.to_string())
+                    .expect("failed writing temporary file");
+                (arch_tempfile.path().into(), Some(arch_tempfile))
             }
         };
 
@@ -230,29 +305,14 @@ impl FaustBuilder {
         let _ = self.build_to_stdout(vec![FaustArg::Xml()]);
     }
 
-    pub fn build_xml_at_file(&self, out: &str) {
-        let gen_xml_path: PathBuf = FaustArg::DspPath(self.in_file.clone()).xml_path();
-        self.build_xml();
-        fs::rename(&gen_xml_path, out).unwrap_or_else(|_| {
-            panic!(
-                "rename of xml file failed from '{:?}' to '{:?}'",
-                gen_xml_path, out
-            )
-        });
-    }
-
-    pub fn build_json(&self) -> String {
-        self.build_to_stdout(vec![FaustArg::Json()])
-    }
-
-    pub fn build_json_at_file(&self, out: &str) {
-        let gen_json_path = faust_utils::json_path_from_dsp_path(&self.in_file);
-        self.build_json();
-        fs::rename(&gen_json_path, out).unwrap_or_else(|_| {
-            panic!(
-                "rename of json file failed from '{:?}' to '{:?}'",
-                gen_json_path, out
-            )
-        });
-    }
+    // pub fn build_xml_at_file(&self, out: &str) {
+    //     let gen_xml_path: PathBuf = FaustArg::DspPath(self.in_file.clone()).xml_path();
+    //     self.build_xml();
+    //     fs::rename(&gen_xml_path, out).unwrap_or_else(|_| {
+    //         panic!(
+    //             "rename of xml file failed from '{:?}' to '{:?}'",
+    //             gen_xml_path, out
+    //         )
+    //     });
+    // }
 }

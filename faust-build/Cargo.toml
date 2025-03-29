@@ -11,18 +11,22 @@ readme = "../README.md"
 
 [features]
 default = ["codegen"]
-codegen = ["dep:faust-json", "dep:proc-macro2", "dep:syn", "dep:quote"]
+json = ["dep:faust-json", "dep:serde_json"]
+codegen = ["json", "dep:faust-json", "dep:proc-macro2", "dep:syn", "dep:quote", ]
 
 [dependencies]
-tempfile = "3.2.0"
-heck = "0.3.2"
+tempfile.workspace = true
+heck.workspace = true
+
+# dependencies for json feature
+serde_json = { workspace = true, optional = true }
 
 # dependencies for codegen feature
 faust-json = { workspace = true, optional = true}
-proc-macro2 = { version="*", optional = true}
-syn = { version = "^2.0", optional = true }
-quote = { version = "^1.0", optional = true }
+proc-macro2 = { workspace = true, optional = true}
+syn = { workspace = true, optional = true }
+quote = { workspace = true, optional = true }
+
 
 [build-dependencies]
-regex = "*"
-heck = "0.3.2"
+regex.workspace = true

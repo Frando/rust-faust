@@ -1,8 +1,3 @@
-use faust_json::deserialize::FaustJson;
-use heck::CamelCase;
-use quote::{format_ident, quote};
-use tempfile::NamedTempFile;
-
 pub fn strip_quotes(name: &proc_macro2::TokenTree) -> String {
     name.to_string()
         .strip_prefix('\"')
