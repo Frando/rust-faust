@@ -1,8 +1,10 @@
+use std::collections::HashMap;
+
 use serde::{Deserialize, Deserializer};
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct Faust {
+pub struct FaustDescriptionJson {
     pub name: String,
     pub filename: String,
     pub version: String,
@@ -24,7 +26,7 @@ pub struct Faust {
     pub ui: Vec<LayoutItem>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Meta {
     pub key: String,
     pub value: String,
@@ -35,13 +37,13 @@ impl<'de> Deserialize<'de> for Meta {
     where
         D: Deserializer<'de>,
     {
-        let map: std::collections::HashMap<String, Option<String>> =
-            Deserialize::deserialize(deserializer).unwrap();
+        let map: HashMap<String, Option<String>> = Deserialize::deserialize(deserializer)
+            .unwrap_or_else(|err| panic!("Error during Deserialization: {err}"));
         let Some((key, Some(value))): Option<(&String, &Option<String>)> = map.iter().next() else {
-            panic!("bla")
+            panic!("meta dictionary is unexpectedly empty")
         };
 
-        Ok(Meta {
+        Ok(Self {
             key: key.to_owned(),
             value: value.to_owned(),
         })

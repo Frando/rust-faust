@@ -4,7 +4,7 @@ use tempfile::NamedTempFile;
 
 #[derive(Debug, Clone)]
 pub enum FaustArg {
-    Arg(String),
+    Custom(String),
     // Input options:
     // ---------------------------------------
     //   -a <file>                               wrapper architecture file.
@@ -189,7 +189,7 @@ impl FaustArg {
 
 impl std::convert::From<String> for FaustArg {
     fn from(val: String) -> Self {
-        Self::Arg(val)
+        Self::Custom(val)
     }
 }
 
@@ -203,7 +203,7 @@ pub trait FaustArgsToCommandArgs {
 impl FaustArgsToCommandArgs for FaustArg {
     fn to_command_args(&self) -> Vec<&OsStr> {
         match self {
-            Self::Arg(arg) => vec![arg.as_ref()],
+            Self::Custom(arg) => vec![arg.as_ref()],
             Self::ArchFile(path_buf) => vec!["-a".as_ref() as &OsStr, path_buf.as_ref()],
             Self::ImportDir(path_buf) => vec!["-I".as_ref() as &OsStr, path_buf.as_ref()],
             Self::OutPath(path_buf) => vec!["-o".as_ref() as &OsStr, path_buf.as_ref()],

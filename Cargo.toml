@@ -1,14 +1,45 @@
 [workspace]
 members = [
   "faust-build",
-  "faust-json",
+  "faust-description-json",
   "faust-macro",
+  "faust-macro-lib",
   "faust-state",
   "faust-types",
-  "faust-xml",
+  "faust-description-xml",
   "examples/example-jack",
   "examples/example-jack-macro",
   "examples/example-dbmeter-jack",
   "examples/example-f64",
 ]
 resolver="2"
+
+[workspace.dependencies]
+faust-build.path = "./faust-build"
+faust-description-json.path = "./faust-description-json"
+faust-description-xml.path = "./faust-description-xml"
+faust-macro.path = "./faust-macro"
+faust-macro-lib.path = "./faust-macro-lib"
+faust-types.path = "./faust-types"
+
+tempfile = "3.2.0"
+
+# dependencies for json feature
+serde = { version = "1.0", features = ["derive"] } 
+serde_json = { package = "serde_json_path_to_error", version = "0.1" }
+
+# dependencies for xml feature
+quick-xml = { version = "^0.36", features = ["serialize", "serde-types"] } 
+serde_path_to_error = "0.1.16"
+
+# dependencies for codegen feature
+prettyplease = "^0.2"
+proc-macro2 = { version="*" }
+syn = { version = "^2.0" }
+quote = { version = "^1.0" }
+
+regex = "*"
+strum_macros = "^0.27"
+
+# CamelCase
+heck = "0.3.2"
