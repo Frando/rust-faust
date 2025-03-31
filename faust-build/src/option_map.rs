@@ -2,7 +2,6 @@
 
 use crate::{
     code_option::{CodeOption, CodeOptionDiscriminants},
-    compile_option::{CompileOption, CompileOptionDiscriminants},
     FaustArgsToCommandArgs, FaustArgsToCommandArgsRef,
 };
 use std::{
@@ -17,7 +16,6 @@ use strum::IntoDiscriminant;
 #[derive(Debug, Clone)]
 pub struct OptionMap<K, V>(HashMap<K, V>);
 
-pub type CompileOptionMap = OptionMap<CompileOptionDiscriminants, CompileOption>;
 pub type CodeOptionMap = OptionMap<CodeOptionDiscriminants, CodeOption>;
 
 impl<'a, K, V> OptionMap<K, V>
@@ -77,18 +75,6 @@ where
         for i in iter {
             r.insert(i);
         }
-        r
-    }
-}
-
-impl Default for CompileOptionMap {
-    fn default() -> Self {
-        let mut r = Self(HashMap::default());
-        r.extend([
-            CompileOption::default_lang(),
-            CompileOption::default_timeout(),
-            CompileOption::DebugWarnings,
-        ]);
         r
     }
 }

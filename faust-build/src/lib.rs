@@ -15,7 +15,7 @@ use std::ffi::OsStr;
 
 pub mod builder;
 pub mod code_option;
-pub mod compile_option;
+pub mod compile_options;
 pub mod macro_lib;
 pub mod option_map;
 
