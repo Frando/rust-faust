@@ -4,43 +4,167 @@
     clippy::pedantic,
     clippy::nursery,
     // clippy::cargo
+    unused_crate_dependencies
 )]
 
-use deserialize::FaustJson;
-use proc_macro2::TokenStream;
-use quote::{format_ident, quote};
+#[cfg(test)]
+use serde_json as _;
 
-pub mod deserialize;
-pub mod enum_interface;
-pub mod struct_interface;
+use serde::{Deserialize, Deserializer};
+use std::collections::HashMap;
 
-impl FaustJson {
-    #[must_use]
-    pub fn ui(
-        &self,
-        module_name: impl AsRef<str>,
-        struct_name: impl AsRef<str>,
-    ) -> (TokenStream, TokenStream) {
-        let module_name = format_ident!("{}", module_name.as_ref());
-        let struct_name = format_ident!("{}", struct_name.as_ref());
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct FaustJson {
+    pub name: String,
+    pub filename: String,
+    pub version: String,
+    pub compile_options: String,
+    #[serde(default)] //allow empty list
+    pub library_list: Vec<String>,
+    #[serde(default)] //allow empty list
+    pub include_pathnames: Vec<String>,
+    pub size: u32,
+    pub inputs: usize,
+    pub outputs: usize,
+    pub author: Option<String>,
+    pub license: Option<String>,
+    pub copyright: Option<String>,
+    pub classname: Option<String>,
+    #[serde(default)] //allow empty list
+    pub meta: Vec<Meta>,
+    #[serde(default)] //allow empty list
+    pub ui: Vec<LayoutItem>,
+}
 
-        let ui_static_name = format_ident!("UI");
-        let ui_type = format_ident!("NewUI");
+#[derive(Debug, PartialEq, Eq)]
+pub struct Meta {
+    pub key: String,
+    pub value: String,
+}
 
-        let (ui_enum, has_active, has_passive) = enum_interface::create(self, &struct_name);
-        let active_line = enum_interface::reexport_active_tokenstream(has_active, &module_name);
-        let passive_line = enum_interface::reexport_passive_tokenstream(has_passive, &module_name);
-        let struct_interface = struct_interface::create(self, &ui_static_name, &ui_type);
-
-        let ui_code = quote! {
-            #ui_enum
-            #struct_interface
+impl<'de> Deserialize<'de> for Meta {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let map: HashMap<String, Option<String>> = Deserialize::deserialize(deserializer)
+            .unwrap_or_else(|err| panic!("Error during Deserialization: {err}"));
+        let Some((key, Some(value))): Option<(&String, &Option<String>)> = map.iter().next() else {
+            panic!("meta dictionary is unexpectedly empty")
         };
-        let ui_reexport = quote! {
-            #active_line
-            #passive_line
-            pub use #module_name::#ui_static_name;
-        };
-        (ui_code, ui_reexport)
+
+        Ok(Self {
+            key: key.to_owned(),
+            value: value.to_owned(),
+        })
     }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[serde(tag = "type")]
+#[serde(rename_all = "lowercase")]
+pub enum LayoutItem {
+    TGroup {
+        label: String,
+        items: Vec<LayoutItem>,
+        #[serde(default)]
+        meta: Vec<Meta>,
+    },
+    VGroup {
+        label: String,
+        items: Vec<LayoutItem>,
+        #[serde(default)]
+        meta: Vec<Meta>,
+    },
+    HGroup {
+        label: String,
+        items: Vec<LayoutItem>,
+        #[serde(default)]
+        meta: Vec<Meta>,
+    },
+    VSlider {
+        label: String,
+        shortname: String,
+        address: String,
+        varname: String,
+        init: f32,
+        min: f32,
+        max: f32,
+        step: f32,
+        #[serde(default)]
+        meta: Vec<Meta>,
+    },
+    HSlider {
+        label: String,
+        shortname: String,
+        address: String,
+        varname: String,
+        init: f32,
+        min: f32,
+        max: f32,
+        step: f32,
+        #[serde(default)]
+        meta: Vec<Meta>,
+    },
+    NEntry {
+        label: String,
+        shortname: String,
+        address: String,
+        varname: String,
+        init: Option<f32>,
+        min: f32,
+        max: f32,
+        step: f32,
+        #[serde(default)]
+        meta: Vec<Meta>,
+    },
+    Button {
+        label: String,
+        shortname: String,
+        address: String,
+        varname: String,
+        init: Option<f32>,
+        #[serde(default)]
+        meta: Vec<Meta>,
+    },
+    CheckBox {
+        label: String,
+        shortname: String,
+        address: String,
+        varname: String,
+        init: Option<f32>,
+        #[serde(default)]
+        meta: Vec<Meta>,
+    },
+    VBarGraph {
+        label: String,
+        shortname: String,
+        address: String,
+        varname: String,
+        min: f32,
+        max: f32,
+        #[serde(default)]
+        meta: Vec<Meta>,
+    },
+    HBarGraph {
+        label: String,
+        shortname: String,
+        address: String,
+        varname: String,
+        min: f32,
+        max: f32,
+        #[serde(default)]
+        meta: Vec<Meta>,
+    },
+
+    Soundfile {
+        label: String,
+        url: String,
+        address: String,
+        varname: String,
+        #[serde(default)]
+        meta: Vec<Meta>,
+    },
 }

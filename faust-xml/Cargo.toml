@@ -9,5 +9,7 @@ edition = "2021"
 [dependencies]
 serde = { version = "1.0", features = ["derive"] } 
 quick-xml = { version = "^0.36", features = ["serialize", "serde-types"] } 
+
+[dev-dependencies]
 serde_path_to_error = "0.1.16"
 

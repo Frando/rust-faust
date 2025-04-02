@@ -1,4 +1,3 @@
-use deserialize::FaustJson;
 use faust_json::*;
 
 use std::{
