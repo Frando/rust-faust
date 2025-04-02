@@ -1,4 +1,4 @@
-use faust_build::builder::{Architecture, FaustBuilder};
+use faust_build::{architecture::Architecture, builder::FaustBuilder};
 use std::{env, path::Path};
 
 fn main() {

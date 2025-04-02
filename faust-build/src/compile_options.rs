@@ -1,4 +1,4 @@
-use crate::builder::{Architecture, DspPath};
+use crate::{architecture::Architecture, dsp_path::DspPath};
 use core::panic;
 use std::{ffi::OsStr, path::PathBuf};
 

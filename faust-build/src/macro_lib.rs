@@ -9,9 +9,8 @@
 
 use crate::{builder::FaustBuilder, code_option::CodeOption, option_map::CodeOptionMap};
 use heck::SnakeCase;
-use proc_macro2::TokenStream;
 use std::{env, iter::FromIterator, path::PathBuf, str::FromStr};
-use syn::{parse::Parse, parse_str, Expr, ExprArray, LitStr, Token};
+use syn::{parse::Parse, Expr, ExprArray, LitStr, Token};
 use syn::{Error, ExprPath};
 
 fn strip_quotes(name: &proc_macro2::TokenTree) -> String {
@@ -116,10 +115,11 @@ pub fn build_faust_file_from_macro(args: FileMacroArgs) -> proc_macro2::TokenStr
         dsp_path
     );
 
-    let builder = FaustBuilder::default_for_file_macro(dsp_path, flags);
-    let build = builder.build();
-    //a bit stupid to parse the string again to a token stream
-    parse_str::<TokenStream>(&build).unwrap()
+    let builder = FaustBuilder::default_for_include_macro(dsp_path, flags);
+    // let build =
+    builder.build()
+    // //a bit stupid to parse the string again to a token stream
+    // parse_str::<TokenStream>(&build).unwrap()
 }
 
 #[must_use]
@@ -132,8 +132,9 @@ pub fn build_dsp_code_from_macro(input: &proc_macro2::TokenStream) -> proc_macro
     let builder = FaustBuilder::default_for_dsp_macro(&faust_code, flags);
 
     builder.write_debug_dsp_file(&builder.get_struct_name().to_snake_case());
-    let build = builder.build();
+    let dsp_code = builder.build();
     builder.write_debug_json_file(&builder.get_struct_name().to_snake_case());
+    dsp_code
     //a bit stupid to parse the string again to a token stream
-    parse_str::<TokenStream>(&build).unwrap()
+    // parse_str::<TokenStream>(&build).expect("Failed to parse generated rust code as TokenStream")
 }

@@ -1,7 +1,4 @@
-use faust_build::{
-    builder::{Architecture, ArchitectureUI, FaustBuilder},
-    code_option::CodeOption,
-};
+use faust_build::{architecture::Architecture, builder::FaustBuilder, code_option::CodeOption};
 
 fn main() {
     println!("cargo:rerun-if-changed=dsp");
@@ -10,9 +7,9 @@ fn main() {
     b.set_out_path("src/dsp.rs");
     b.struct_name_from_dsp_name();
     b.module_name_from_dsp_file_path();
-    b.set_json();
-    b.set_xml();
+    b.write_json_file();
+    b.write_xml_file();
     b.set_code_option(CodeOption::Double);
-    b.set_architecture(Architecture::Object(Box::new(ArchitectureUI {})));
+    b.set_architecture(Architecture::ui());
     b.build();
 }

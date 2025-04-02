@@ -331,22 +331,22 @@ mod volume {
         }
     }
     #[derive(Debug)]
-    pub struct NewUI {
-        pub volume: NewUIVolume,
+    pub struct DspUi {
+        pub volume: DspUiVolume,
     }
-    impl NewUI {
+    impl DspUi {
         const fn static_ui() -> Self {
             Self {
-                volume: NewUIVolume::static_ui(),
+                volume: DspUiVolume::static_ui(),
             }
         }
     }
     #[derive(Debug)]
-    pub struct NewUIVolume {
+    pub struct DspUiVolume {
         pub level: UIPassive,
         pub volume: UIActive,
     }
-    impl NewUIVolume {
+    impl DspUiVolume {
         const fn static_ui() -> Self {
             Self {
                 level: UIPassive::Level,
@@ -354,11 +354,11 @@ mod volume {
             }
         }
     }
-    pub static UI: NewUI = NewUI::static_ui();
+    pub static DspUI: DspUi = DspUi::static_ui();
 }
 pub use volume::Volume;
 pub use volume::UIActiveValue;
 pub use volume::UIActive;
 pub use volume::UIPassiveValue;
 pub use volume::UIPassive;
-pub use volume::UI;
+pub use volume::DspUI;

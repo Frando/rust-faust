@@ -2,137 +2,34 @@
 #![allow(clippy::module_name_repetitions)]
 
 use crate::{
+    architecture::Architecture,
     code_option::{CodeOption, CodeOptionDiscriminants},
     compile_options::CompileOptions,
+    dsp_path::DspPath,
     macro_lib::get_name_token,
     option_map::CodeOptionMap,
-    ArchitectureInterface, FaustArgsToCommandArgs,
+    FaustArgsToCommandArgs,
 };
 use core::{panic, str};
-use faust_json::deserialize::FaustJson;
+use faust_json::FaustJson;
 use heck::{CamelCase, SnakeCase};
 use proc_macro2::TokenStream;
-use quote::{format_ident, quote};
 use std::{
     env,
     fs::{self, File},
     io::{BufReader, BufWriter, Write},
-    ops::Deref,
     path::{Path, PathBuf},
     process::Command,
-    rc::Rc,
 };
-use syn::parse_str;
 use tempfile::{NamedTempFile, TempPath};
 
 static DEFAULT_MODULE_NAME: &str = "dsp";
-pub struct ArchitectureDefault {}
-
-impl ArchitectureInterface for ArchitectureDefault {
-    fn wrap(&self, _builder: &FaustBuilder, dsp_code: TokenStream) -> TokenStream {
-        quote! {
-                #![allow(clippy::all)]
-                #![allow(unused_parens)]
-                #![allow(non_snake_case)]
-                #![allow(non_camel_case_types)]
-                #![allow(dead_code)]
-                #![allow(unused_variables)]
-                #![allow(unused_mut)]
-                #![allow(non_upper_case_globals)]
-                use faust_types::*;
-                #dsp_code
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub enum DspPath {
-    File(PathBuf),
-    Temp(Rc<TempPath>),
-}
-
-impl Deref for DspPath {
-    type Target = Path;
-
-    fn deref(&self) -> &Self::Target {
-        match self {
-            Self::File(path_buf) => path_buf,
-            Self::Temp(rc) => rc,
-        }
-    }
-}
-
-impl PartialEq for DspPath {
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (Self::File(l0), Self::File(r0)) => l0 == r0,
-            (Self::Temp(_l0), Self::Temp(_r0)) => false,
-            _ => false,
-        }
-    }
-}
-impl Eq for DspPath {}
-
-pub struct ArchitectureUI {}
-
-impl ArchitectureInterface for ArchitectureUI {
-    fn wrap(&self, builder: &FaustBuilder, dsp_code: TokenStream) -> TokenStream {
-        let module_name = builder.get_module_name();
-        let struct_name = builder.get_struct_name();
-        let json_path = builder.get_json_path();
-        match fs::exists(&json_path) {
-            Ok(b) => {
-                assert!(b, "json file not found at path: {:?}", json_path);
-            }
-            Err(err) => panic!("json file not found at path: {:?}", err),
-        }
-        let (ui_code, ui_reexport) =
-            FaustBuilder::get_ui_from_json(&json_path, module_name, struct_name);
-
-        let module_name = format_ident!("{}", module_name);
-        let struct_name = format_ident!("{}", struct_name);
-        quote! {
-            mod #module_name {
-                #![allow(clippy::all)]
-                #![allow(unused_parens)]
-                #![allow(non_snake_case)]
-                #![allow(non_camel_case_types)]
-                #![allow(dead_code)]
-                #![allow(unused_variables)]
-                #![allow(unused_mut)]
-                #![allow(non_upper_case_globals)]
-                use faust_types::*;
-                #dsp_code
-                #ui_code
-            }
-
-            pub use #module_name::#struct_name;
-            #ui_reexport
-        }
-    }
-}
-
-pub enum Architecture {
-    None,
-    Function(bool), //todo
-    Object(Box<dyn ArchitectureInterface>),
-    File(PathBuf),
-}
-impl Architecture {
-    #[must_use]
-    pub fn to_command_arg(&self) -> Option<&Path> {
-        match self {
-            Self::File(arch_file) => Some(arch_file),
-            _ => None,
-        }
-    }
-}
 
 pub struct FaustBuilder {
     faust_path: PathBuf,
     code_gen_options: CodeOptionMap,
     module_name: Option<String>,
-    out_path: Option<PathBuf>, //out_path is not used in the compile options!
+    out_path: Option<PathBuf>,
     compile_options: CompileOptions,
 }
 
@@ -150,7 +47,7 @@ impl Default for FaustBuilder {
 
 impl FaustBuilder {
     #[must_use]
-    pub fn get_code_gen_option(&self, key: &CodeOptionDiscriminants) -> Option<&CodeOption> {
+    pub fn get_code_option(&self, key: &CodeOptionDiscriminants) -> Option<&CodeOption> {
         self.code_gen_options.get(key)
     }
 
@@ -181,11 +78,11 @@ impl FaustBuilder {
         self.compile_options.dsp_path = Some(DspPath::Temp(temp_path.into().into()));
     }
 
-    pub fn set_xml(&mut self) {
+    pub fn write_xml_file(&mut self) {
         self.compile_options.xml = true;
     }
 
-    pub fn set_json(&mut self) {
+    pub fn write_json_file(&mut self) {
         self.compile_options.json = true;
     }
 
@@ -198,8 +95,8 @@ impl FaustBuilder {
         b.set_out_path(out_path);
         b.struct_name_from_dsp_name();
         b.module_name_from_dsp_file_path();
-        b.set_json();
-        b.set_architecture(Architecture::Object(Box::new(ArchitectureUI {})));
+        b.write_json_file();
+        b.set_architecture(Architecture::ui());
         b
     }
 
@@ -213,14 +110,14 @@ impl FaustBuilder {
     }
 
     #[must_use]
-    pub fn default_for_file_macro(dsp_path: PathBuf, extra_flags: CodeOptionMap) -> Self {
+    pub fn default_for_include_macro(dsp_path: PathBuf, extra_flags: CodeOptionMap) -> Self {
         let mut builder = Self::default();
-        builder.set_json();
+        builder.write_json_file();
         builder.set_dsp_path(dsp_path);
         builder.struct_name_from_dsp_name();
         builder.module_name_from_dsp_file_path();
-        builder.set_architecture(Architecture::Object(Box::new(ArchitectureUI {})));
-        builder.extend_code_gen_options(extra_flags);
+        builder.set_architecture(Architecture::ui());
+        builder.extend_code_options(extra_flags);
         builder
     }
 
@@ -228,49 +125,13 @@ impl FaustBuilder {
     pub fn default_for_dsp_macro(faust_code: &str, extra_flags: CodeOptionMap) -> Self {
         let mut builder = Self::default();
         builder.write_temp_dsp_file(faust_code);
-        builder.set_json();
+        builder.write_json_file();
         builder.struct_name_from_dsp_name();
         builder.module_name_from_struct_name();
-        builder.set_architecture(Architecture::Object(Box::new(ArchitectureUI {})));
-        builder.extend_code_gen_options(extra_flags);
+        builder.set_architecture(Architecture::ui());
+        builder.extend_code_options(extra_flags);
         builder
     }
-
-    // #[must_use]
-    // pub fn compile_options_to_command_args(&self) -> Vec<&OsStr> {
-    //     let mut r = Vec::<&OsStr>::new();
-    //     if let Some(arch_file) = self.architecture.to_command_arg() {
-    //         r.push("-a".as_ref());
-    //         r.push(arch_file.as_ref());
-    //     }
-    //     if let Some(import_dir) = &self.import_dir {
-    //         r.push("-I".as_ref());
-    //         r.push(import_dir.as_ref());
-    //     }
-    //     if self.xml {
-    //         r.push("-xml".as_ref());
-    //     }
-    //     if self.json {
-    //         r.push("-json".as_ref());
-    //     }
-    //     r.push("-lang".as_ref());
-    //     r.push(self.lang.as_ref());
-
-    //     if self.debug_warnings {
-    //         r.push("-wall".as_ref());
-    //     }
-    //     // 120 is default
-    //     if let Some(timeout) = &self.timeout {
-    //         r.push("-t".as_ref());
-    //         r.push(timeout.as_ref());
-    //     }
-    //     if let Some(dsp_path) = &self.dsp_path {
-    //         r.push(dsp_path.as_ref());
-    //     } else {
-    //         panic!("No Path to DSP file provided")
-    //     }
-    //     r
-    // }
 
     #[must_use]
     pub fn run_faust(&self) -> String {
@@ -298,51 +159,23 @@ impl FaustBuilder {
         String::from_utf8(faust_result.stdout).expect("could not parse stdout from command")
     }
 
-    fn fix_arch_wrap(dsp_code: &str, struct_name: &str) -> String {
-        let dsp_code = dsp_code.replace("<<moduleName>>", "dsp");
-        dsp_code.replace("<<structName>>", struct_name)
-    }
-
     fn pretty(ts: TokenStream) -> String {
         let st = syn::parse2(ts).expect("Failed to parse Rust code in wrapper");
         prettyplease::unparse(&st)
     }
 
-    fn apply_arch_obj(&self, dsp_code: &str, arch: &dyn ArchitectureInterface) -> String {
-        let ts = parse_str::<TokenStream>(dsp_code).expect("Failed to parse string into tokens");
-        let ts = arch.wrap(self, ts);
-        Self::pretty(ts)
-    }
-
     #[allow(clippy::must_use_candidate)]
-    pub fn build(&self) -> String {
+    pub fn build(&self) -> TokenStream {
         let dsp_code = self.run_faust();
-        let dsp_code = match &self.compile_options.architecture {
-            Architecture::None => {
-                //or really none?
-                let architecture_default = ArchitectureDefault {};
-                self.apply_arch_obj(&dsp_code, &architecture_default)
-            }
-            Architecture::Function(_) => todo!(),
-            Architecture::Object(architecture_interface) => {
-                self.apply_arch_obj(&dsp_code, architecture_interface.as_ref())
-            }
-            Architecture::File(_path_buf) => {
-                let dsp_code = Self::fix_arch_wrap(&dsp_code, self.get_struct_name());
-
-                let ts = parse_str::<TokenStream>(&dsp_code)
-                    .expect("Failed to parse string into tokens");
-                Self::pretty(ts)
-            }
-        };
-
+        let ts = self.compile_options.architecture.apply(self, &dsp_code);
+        let dsp_code = Self::pretty(ts.clone());
         if let Some(out_path) = &self.out_path {
             fs::write(out_path, &dsp_code).expect("failed to write to destination path");
         }
-        dsp_code
+        ts
     }
 
-    pub(crate) fn extend_code_gen_options(&mut self, flags: impl IntoIterator<Item = CodeOption>) {
+    pub(crate) fn extend_code_options(&mut self, flags: impl IntoIterator<Item = CodeOption>) {
         self.code_gen_options.extend(flags);
     }
 
@@ -382,7 +215,7 @@ impl FaustBuilder {
         path
     }
 
-    fn get_ui_from_json(
+    pub fn get_ui_from_json(
         json_path: &Path,
         module_name: impl AsRef<str>,
         struct_name: impl AsRef<str>,
@@ -392,13 +225,13 @@ impl FaustBuilder {
         let faust_json: FaustJson = serde_json::from_reader(json_reader).unwrap_or_else(|err| {
             panic!("json parsing error: {}", err);
         });
-        faust_json.ui(module_name, struct_name)
+        faust_ui::to_ui_code_and_rexport(&faust_json, module_name, struct_name)
     }
 
     #[must_use]
     pub fn get_struct_name(&self) -> &String {
         let CodeOption::StructName(struct_name) = self
-            .get_code_gen_option(&CodeOptionDiscriminants::StructName)
+            .get_code_option(&CodeOptionDiscriminants::StructName)
             .unwrap()
         else {
             panic!()

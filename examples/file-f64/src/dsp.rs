@@ -392,35 +392,35 @@ mod volume {
         }
     }
     #[derive(Debug)]
-    pub struct NewUI {
-        pub volume: NewUIVolume,
+    pub struct DspUi {
+        pub volume: DspUiVolume,
     }
-    impl NewUI {
+    impl DspUi {
         const fn static_ui() -> Self {
             Self {
-                volume: NewUIVolume::static_ui(),
+                volume: DspUiVolume::static_ui(),
             }
         }
     }
     #[derive(Debug)]
-    pub struct NewUIVolume {
-        pub channel_0: NewUIVolumeChannel0,
-        pub channel_1: NewUIVolumeChannel1,
+    pub struct DspUiVolume {
+        pub channel_0: DspUiVolumeChannel0,
+        pub channel_1: DspUiVolumeChannel1,
     }
-    impl NewUIVolume {
+    impl DspUiVolume {
         const fn static_ui() -> Self {
             Self {
-                channel_0: NewUIVolumeChannel0::static_ui(),
-                channel_1: NewUIVolumeChannel1::static_ui(),
+                channel_0: DspUiVolumeChannel0::static_ui(),
+                channel_1: DspUiVolumeChannel1::static_ui(),
             }
         }
     }
     #[derive(Debug)]
-    pub struct NewUIVolumeChannel0 {
+    pub struct DspUiVolumeChannel0 {
         pub level: UIPassive,
         pub volume: UIActive,
     }
-    impl NewUIVolumeChannel0 {
+    impl DspUiVolumeChannel0 {
         const fn static_ui() -> Self {
             Self {
                 level: UIPassive::Channel0Level,
@@ -429,11 +429,11 @@ mod volume {
         }
     }
     #[derive(Debug)]
-    pub struct NewUIVolumeChannel1 {
+    pub struct DspUiVolumeChannel1 {
         pub level: UIPassive,
         pub volume: UIActive,
     }
-    impl NewUIVolumeChannel1 {
+    impl DspUiVolumeChannel1 {
         const fn static_ui() -> Self {
             Self {
                 level: UIPassive::Channel1Level,
@@ -441,11 +441,11 @@ mod volume {
             }
         }
     }
-    pub static UI: NewUI = NewUI::static_ui();
+    pub static DspUI: DspUi = DspUi::static_ui();
 }
 pub use volume::Volume;
 pub use volume::UIActiveValue;
 pub use volume::UIActive;
 pub use volume::UIPassiveValue;
 pub use volume::UIPassive;
-pub use volume::UI;
+pub use volume::DspUI;

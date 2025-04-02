@@ -4,24 +4,21 @@
     clippy::pedantic,
     clippy::nursery,
     // clippy::cargo
+    unused_crate_dependencies
 )]
 #![allow(clippy::missing_panics_doc)]
-#![allow(clippy::missing_const_for_fn)]
-#![allow(clippy::or_fun_call)]
+// #![allow(clippy::missing_const_for_fn)]
+// #![allow(clippy::or_fun_call)]
 
-use builder::FaustBuilder;
-use proc_macro2::TokenStream;
 use std::ffi::OsStr;
 
+pub mod architecture;
 pub mod builder;
 pub mod code_option;
 pub mod compile_options;
+pub mod dsp_path;
 pub mod macro_lib;
 pub mod option_map;
-
-pub trait ArchitectureInterface {
-    fn wrap(&self, builder: &FaustBuilder, dsp_code: TokenStream) -> TokenStream;
-}
 
 /// Trait to transform a Vector o`FaustArgs`gs into a Vector`OsStr`sStr references.
 ///
