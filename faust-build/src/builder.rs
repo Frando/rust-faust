@@ -3,23 +3,21 @@
 
 use crate::{
     architecture::Architecture,
-    code_option::{CodeOption, CodeOptionDiscriminants},
+    code_option::{CodeOption, CodeOptionDiscriminants, CodeOptionMap},
     compile_options::CompileOptions,
     dsp_path::DspPath,
-    macro_lib::get_name_token,
-    option_map::CodeOptionMap,
     FaustArgsToCommandArgs,
 };
-use core::{panic, str};
-use faust_json::FaustJson;
 use heck::{CamelCase, SnakeCase};
 use proc_macro2::TokenStream;
 use std::{
     env,
-    fs::{self, File},
-    io::{BufReader, BufWriter, Write},
+    fs::{self},
+    io::{BufWriter, Write},
+    panic,
     path::{Path, PathBuf},
     process::Command,
+    str,
 };
 use tempfile::{NamedTempFile, TempPath};
 
@@ -86,6 +84,7 @@ impl FaustBuilder {
         self.compile_options.json = true;
     }
 
+    #[cfg(feature = "faust-ui")]
     pub fn default_for_file_with_ui(
         dsp_path: impl Into<PathBuf>,
         out_path: impl Into<PathBuf>,
@@ -109,6 +108,7 @@ impl FaustBuilder {
         b
     }
 
+    #[cfg(feature = "faust-ui")]
     #[must_use]
     pub fn default_for_include_macro(dsp_path: PathBuf, extra_flags: CodeOptionMap) -> Self {
         let mut builder = Self::default();
@@ -121,6 +121,7 @@ impl FaustBuilder {
         builder
     }
 
+    #[cfg(feature = "faust-ui")]
     #[must_use]
     pub fn default_for_dsp_macro(faust_code: &str, extra_flags: CodeOptionMap) -> Self {
         let mut builder = Self::default();
@@ -175,15 +176,20 @@ impl FaustBuilder {
         ts
     }
 
-    pub(crate) fn extend_code_options(&mut self, flags: impl IntoIterator<Item = CodeOption>) {
+    pub fn extend_code_options(&mut self, flags: impl IntoIterator<Item = CodeOption>) {
         self.code_gen_options.extend(flags);
     }
 
     pub fn struct_name_from_dsp_name(&mut self) {
+        let msg = "generated rust code could";
         let path = self.get_dsp_path();
-        let faust_code = fs::read(path).unwrap();
-        let faust_code = String::from_utf8(faust_code).unwrap();
-        let ts: proc_macro2::TokenStream = faust_code.parse().unwrap();
+        let faust_code = fs::read(path)
+            .unwrap_or_else(|_| panic!("{} not be read at path: {}", msg, path.to_string_lossy()));
+        let faust_code = String::from_utf8(faust_code)
+            .unwrap_or_else(|_| panic!("{} interpreted as String", msg));
+        let ts: proc_macro2::TokenStream = faust_code
+            .parse()
+            .unwrap_or_else(|_| panic!("{} parse as TokenStream", msg));
         let sn = get_name_token(ts);
         let sn = sn.to_camel_case();
         self.set_code_option(CodeOption::StructName(sn));
@@ -199,7 +205,7 @@ impl FaustBuilder {
             .to_snake_case();
 
         self.module_name = Some(module_name);
-        self.module_name.as_ref().unwrap()
+        self.module_name.as_ref().expect("cannot fail")
     }
 
     pub fn module_name_from_struct_name(&mut self) {
@@ -215,26 +221,29 @@ impl FaustBuilder {
         path
     }
 
+    #[cfg(feature = "faust-ui")]
     pub fn get_ui_from_json(
         json_path: &Path,
         module_name: impl AsRef<str>,
         struct_name: impl AsRef<str>,
     ) -> (proc_macro2::TokenStream, proc_macro2::TokenStream) {
-        let json_file = File::open(json_path).expect("Failed to open json file");
-        let json_reader = BufReader::new(json_file);
-        let faust_json: FaustJson = serde_json::from_reader(json_reader).unwrap_or_else(|err| {
-            panic!("json parsing error: {}", err);
-        });
+        let json_file = std::fs::File::open(json_path).expect("Failed to open json file");
+        let json_reader = std::io::BufReader::new(json_file);
+        let faust_json: faust_json::FaustJson = serde_json::from_reader(json_reader)
+            .unwrap_or_else(|err| {
+                panic!("json parsing error: {}", err);
+            });
         faust_ui::to_ui_code_and_rexport(&faust_json, module_name, struct_name)
     }
 
     #[must_use]
     pub fn get_struct_name(&self) -> &String {
+        let msg = "No Struct Name defined";
         let CodeOption::StructName(struct_name) = self
             .get_code_option(&CodeOptionDiscriminants::StructName)
-            .unwrap()
+            .expect(msg)
         else {
-            panic!()
+            panic!("{}", msg)
         };
         struct_name
     }
@@ -314,4 +323,40 @@ impl FaustBuilder {
             let _ignore_error = fs::remove_file(debug_rs);
         }
     }
+}
+
+fn strip_quotes(name: &proc_macro2::TokenTree) -> String {
+    name.to_string()
+        .strip_prefix('\"')
+        .expect("prefix is not \"")
+        .strip_suffix('\"')
+        .expect("postfix is not \"")
+        .to_string()
+}
+
+pub(crate) fn get_declared_value(key: &str, ts: proc_macro2::TokenStream) -> Option<String> {
+    // find the token that declares a key in the dsp file
+    let mut ii = ts.into_iter();
+    while let Some(n) = ii.next() {
+        if n.to_string() == "declare" {
+            if let Some(n) = ii.next() {
+                if n.to_string() == key {
+                    if let Some(value) = ii.next() {
+                        if let Some(semicolon) = ii.next() {
+                            if semicolon.to_string() == ";" {
+                                return Some(strip_quotes(&value));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
+#[must_use]
+pub(crate) fn get_name_token(ts: proc_macro2::TokenStream) -> String {
+    get_declared_value("name", ts)
+        .expect("name declaration is not found.\n Expect 'declare name NAMESTRING;' in faust code.")
 }

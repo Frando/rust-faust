@@ -1,9 +1,79 @@
-use crate::{
-    option_map::{CodeOptionMap, OptionMap},
-    FaustArgsToCommandArgsRef,
+#![allow(clippy::module_name_repetitions)]
+
+use crate::{FaustArgsToCommandArgs, FaustArgsToCommandArgsRef};
+use std::{
+    collections::{hash_map::IntoValues, HashMap, HashSet},
+    ffi::OsStr,
+    iter::FromIterator,
 };
-use std::ffi::OsStr;
-use strum::{EnumDiscriminants, EnumIs, EnumString};
+use strum::{EnumDiscriminants, EnumIs, EnumString, IntoDiscriminant};
+
+#[derive(Debug, Clone, Default)]
+pub struct CodeOptionMap(HashMap<CodeOptionDiscriminants, CodeOption>);
+impl CodeOptionMap {
+    pub fn insert(&mut self, value: CodeOption) -> Option<CodeOption> {
+        self.0.insert(CodeOption::discriminant(&value), value)
+    }
+
+    #[must_use]
+    pub fn get(&self, key: &CodeOptionDiscriminants) -> Option<&CodeOption> {
+        self.0.get(key)
+    }
+
+    #[must_use]
+    pub fn new() -> Self {
+        Self(HashMap::new())
+    }
+
+    #[must_use]
+    pub fn to_command_args_merge<'a>(&'a self, other_args: &'a Self) -> Vec<&'a OsStr> {
+        let keys: HashSet<&CodeOptionDiscriminants> =
+            self.0.keys().chain(other_args.0.keys()).collect();
+        let values = keys
+            .iter()
+            .map(|key| {
+                other_args
+                    .get(key)
+                    .unwrap_or_else(|| self.get(key).expect("cannot fail"))
+            })
+            .collect::<Vec<_>>();
+
+        FaustArgsToCommandArgs::to_command_args(values)
+    }
+}
+
+impl Extend<CodeOption> for CodeOptionMap {
+    fn extend<T: IntoIterator<Item = CodeOption>>(&mut self, iter: T) {
+        for i in iter {
+            self.insert(i);
+        }
+    }
+}
+
+impl FromIterator<CodeOption> for CodeOptionMap {
+    fn from_iter<T: IntoIterator<Item = CodeOption>>(iter: T) -> Self {
+        let mut r = Self(HashMap::new());
+        for i in iter {
+            r.insert(i);
+        }
+        r
+    }
+}
+
+impl IntoIterator for CodeOptionMap {
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_values()
+    }
+    type Item = CodeOption;
+
+    type IntoIter = IntoValues<CodeOptionDiscriminants, CodeOption>;
+}
+
+impl<'a> FaustArgsToCommandArgs<'a> for &'a CodeOptionMap {
+    fn to_command_args(self) -> Vec<&'a OsStr> {
+        FaustArgsToCommandArgs::to_command_args(self.0.values())
+    }
+}
 
 #[derive(Debug, Clone, Eq, EnumDiscriminants, EnumIs, EnumString)]
 #[strum_discriminants(derive(Hash))]
@@ -126,7 +196,7 @@ impl CodeOption {
     pub fn arg_map_from_str_iter(
         iteratable: impl IntoIterator<Item = impl AsRef<str>>,
     ) -> CodeOptionMap {
-        let mut r: OptionMap<CodeOptionDiscriminants, Self> = CodeOptionMap::new();
+        let mut r = CodeOptionMap::new();
         let mut str_iter = iteratable.into_iter();
         while let Some(key) = str_iter.next() {
             let fa = Self::from_str_iter(key.as_ref(), &mut str_iter);

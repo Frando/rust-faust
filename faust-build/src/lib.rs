@@ -4,7 +4,8 @@
     clippy::pedantic,
     clippy::nursery,
     // clippy::cargo
-    unused_crate_dependencies
+    unused_crate_dependencies,
+    clippy::unwrap_used
 )]
 #![allow(clippy::missing_panics_doc)]
 // #![allow(clippy::missing_const_for_fn)]
@@ -17,8 +18,8 @@ pub mod builder;
 pub mod code_option;
 pub mod compile_options;
 pub mod dsp_path;
+#[cfg(feature = "faust-ui")]
 pub mod macro_lib;
-pub mod option_map;
 
 /// Trait to transform a Vector o`FaustArgs`gs into a Vector`OsStr`sStr references.
 ///

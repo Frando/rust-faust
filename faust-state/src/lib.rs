@@ -4,7 +4,8 @@
     clippy::pedantic,
     clippy::nursery,
     // clippy::cargo
-    unused_crate_dependencies
+    unused_crate_dependencies,
+    clippy::unwrap_used
 )]
 #![allow(clippy::missing_panics_doc)]
 #![allow(clippy::missing_errors_doc)]
@@ -121,7 +122,7 @@ where
         }
 
         if !self.dsp_tx.is_full() && state.is_some() {
-            let mut state = state.take().unwrap();
+            let mut state = state.take().expect("cannot fail");
             self.update_state_from_params(&mut state);
             let _ = self.dsp_tx.push(state);
         }
@@ -463,7 +464,7 @@ impl ParamsBuilder {
             };
             e.insert(node);
         } else {
-            let node = self.inner.get_mut(&idx).unwrap();
+            let node = self.inner.get_mut(&idx).expect("ParamIndex not valid");
             node.label = label.to_string();
             node.typ = typ;
             if let Some(mut metadata) = metadata {

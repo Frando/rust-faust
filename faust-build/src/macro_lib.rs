@@ -7,47 +7,13 @@
 )]
 #![allow(clippy::missing_panics_doc)]
 
-use crate::{builder::FaustBuilder, code_option::CodeOption, option_map::CodeOptionMap};
+use crate::{
+    builder::{get_declared_value, FaustBuilder},
+    code_option::CodeOption,
+};
 use heck::SnakeCase;
 use std::{env, iter::FromIterator, path::PathBuf, str::FromStr};
-use syn::{parse::Parse, Expr, ExprArray, LitStr, Token};
-use syn::{Error, ExprPath};
-
-fn strip_quotes(name: &proc_macro2::TokenTree) -> String {
-    name.to_string()
-        .strip_prefix('\"')
-        .expect("prefix is not \"")
-        .strip_suffix('\"')
-        .expect("postfix is not \"")
-        .to_string()
-}
-
-fn get_declared_value(key: &str, ts: proc_macro2::TokenStream) -> Option<String> {
-    // find the token that declares a key in the dsp file
-    let mut ii = ts.into_iter();
-    while let Some(n) = ii.next() {
-        if n.to_string() == "declare" {
-            if let Some(n) = ii.next() {
-                if n.to_string() == key {
-                    if let Some(value) = ii.next() {
-                        if let Some(semicolon) = ii.next() {
-                            if semicolon.to_string() == ";" {
-                                return Some(strip_quotes(&value));
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-    None
-}
-
-#[must_use]
-pub fn get_name_token(ts: proc_macro2::TokenStream) -> String {
-    get_declared_value("name", ts)
-        .expect("name declaration is not found.\n Expect 'declare name NAMESTRING;' in faust code.")
-}
+use syn::{parse::Parse, Error, Expr, ExprArray, ExprPath, LitStr, Token};
 
 fn get_flags_token(ts: proc_macro2::TokenStream) -> Vec<String> {
     get_declared_value("flags", ts).map_or_else(std::vec::Vec::new, |s| {
@@ -102,9 +68,13 @@ impl Parse for FileMacroArgs {
     }
 }
 
+#[cfg(feature = "faust-ui")]
 #[must_use]
 pub fn build_faust_file_from_macro(args: FileMacroArgs) -> proc_macro2::TokenStream {
-    let source_file = env::var("CARGO_MANIFEST_DIR").unwrap();
+    use crate::code_option::CodeOptionMap;
+
+    let source_file =
+        env::var("CARGO_MANIFEST_DIR").expect("environment variable CARGO_MANIFEST_DIR is not set");
     let folder: PathBuf = source_file.into();
     let flags = CodeOptionMap::from_iter(args.flags);
     let relative_dsp_path: PathBuf = args.dsp_path.value().into();
@@ -122,6 +92,7 @@ pub fn build_faust_file_from_macro(args: FileMacroArgs) -> proc_macro2::TokenStr
     // parse_str::<TokenStream>(&build).unwrap()
 }
 
+#[cfg(feature = "faust-ui")]
 #[must_use]
 pub fn build_dsp_code_from_macro(input: &proc_macro2::TokenStream) -> proc_macro2::TokenStream {
     let faust_code = format!("{input}").replace(';', ";\n");

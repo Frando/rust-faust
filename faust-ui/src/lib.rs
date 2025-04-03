@@ -4,8 +4,8 @@
     clippy::pedantic,
     clippy::nursery,
     // clippy::cargo
-    unused_crate_dependencies
-
+    unused_crate_dependencies,
+    clippy::unwrap_used
 )]
 
 use faust_json::FaustJson;

@@ -55,7 +55,7 @@ impl CompileOptions {
     #[must_use]
     pub fn to_command_args(&self) -> Vec<&OsStr> {
         let mut r = Vec::<&OsStr>::new();
-        if let Some(arch_file) = self.architecture.to_command_arg() {
+        if let Some(arch_file) = self.architecture.get_file_path() {
             r.push("-a".as_ref());
             r.push(arch_file.as_ref());
         }
