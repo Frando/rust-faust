@@ -1,20 +1,11 @@
-#![allow(unused_parens)]
-#![allow(non_snake_case)]
-#![allow(non_camel_case_types)]
-#![allow(dead_code)]
-#![allow(unused_variables)]
-#![allow(unused_mut)]
-#![allow(non_upper_case_globals)]
-
-#[cfg(feature = "libm")]
-pub use libm;
-
 pub type F32 = f32;
 pub type F64 = f64;
 
 #[derive(Copy, Clone, Debug)]
 pub struct ParamIndex(pub i32);
 
+#[allow(dead_code)]
+#[allow(non_snake_case)]
 pub struct Soundfile<'a> {
     fBuffers: &'a &'a F32,
     fLength: &'a i32,
@@ -48,16 +39,6 @@ pub trait FaustDsp {
     fn get_param(&self, param: ParamIndex) -> Option<Self::T>;
     fn set_param(&mut self, param: ParamIndex, value: Self::T);
     fn compute(&mut self, count: i32, inputs: &[&[Self::T]], outputs: &mut [&mut [Self::T]]);
-
-    // NOTE:
-    // these seem to be created by the faust codegen,
-    // but are not present here? weird, investigate.
-    fn get_output_rate(&self, channel: i32) -> i32 {
-        1
-    }
-    fn get_input_rate(&self, channel: i32) -> i32 {
-        1
-    }
 }
 
 pub trait Meta {
@@ -101,4 +82,20 @@ pub trait UI<T> {
 
     // -- metadata declarations
     fn declare(&mut self, param: Option<ParamIndex>, key: &str, value: &str);
+}
+
+// traits for generated code
+pub trait UISet<D, F> {
+    fn set(&self, dsp: &mut D, value: F);
+}
+pub trait UISelfSet<D, F> {
+    fn set(&self, dsp: &mut D);
+    fn get(&self) -> F;
+}
+
+pub trait UIGet<D> {
+    type E;
+    type F;
+    fn get_value(&self, dsp: &D) -> Self::F;
+    fn get_enum(&self, dsp: &D) -> Self::E;
 }

@@ -4,6 +4,7 @@ members = [
   "faust-json",
   "faust-macro",
   "faust-state",
+  "faust-ui",
   "faust-types",
   "faust-xml",
   "examples/example-jack",

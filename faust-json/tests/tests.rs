@@ -11,7 +11,7 @@ fn parse_file(p: PathBuf) {
     dbg!(&p);
     let file = File::open(p).expect("Failed to open file");
     let reader = BufReader::new(file);
-    let result: Result<Faust, _> = serde_json::from_reader(reader);
+    let result: Result<FaustJson, _> = serde_json::from_reader(reader);
     match &result {
         Ok(_f) => {
             //   dbg!(f);
@@ -49,8 +49,8 @@ fn hand_written() {
 	"filename": "volume.dsp",
 	"version": "2.76.0",
 	"compile_options": "-lang rust -ct 1 -es 1 -mcd 16 -mdd 1024 -mdy 33 -single -ftz 0",
-	"library_list": ["/home/olaf/projects/rust/faust4rust/faust-test/faust/libraries/stdfaust.lib","/home/olaf/projects/rust/faust4rust/faust-test/faust/libraries/basics.lib","/home/olaf/projects/rust/faust4rust/faust-test/faust/libraries/signals.lib","/home/olaf/projects/rust/faust4rust/faust-test/faust/libraries/maths.lib","/home/olaf/projects/rust/faust4rust/faust-test/faust/libraries/platform.lib"],
-	"include_pathnames": ["/home/olaf/projects/rust/faust4rust/faust-test/faust/libraries","/home/olaf/projects/rust/faust4rust/faust-test/faust/build/share/faust","/usr/local/share/faust","/usr/share/faust",".","/home/olaf/projects/rust/faust4rust/faust-test/faust/build/bin"],
+	"library_list": [],
+	"include_pathnames": [],
 	"size": 48,
 	"inputs": 2,
 	"outputs": 2,
@@ -105,7 +105,7 @@ fn hand_written() {
 				}
 	]
 }"##;
-    let result: Result<Faust, _> = serde_json::from_str(f);
+    let result: Result<FaustJson, _> = serde_json::from_str(f);
     match &result {
         Ok(f) => {
             dbg!(f);
@@ -126,8 +126,8 @@ fn hand_written_broken() {
 	"filename": "volume.dsp",
 	"version": "2.76.0",
 	"compile_options": "-lang rust -ct 1 -es 1 -mcd 16 -mdd 1024 -mdy 33 -single -ftz 0",
-	"library_list": ["/home/olaf/projects/rust/faust4rust/faust-test/faust/libraries/stdfaust.lib","/home/olaf/projects/rust/faust4rust/faust-test/faust/libraries/basics.lib","/home/olaf/projects/rust/faust4rust/faust-test/faust/libraries/signals.lib","/home/olaf/projects/rust/faust4rust/faust-test/faust/libraries/maths.lib","/home/olaf/projects/rust/faust4rust/faust-test/faust/libraries/platform.lib"],
-	"include_pathnames": ["/home/olaf/projects/rust/faust4rust/faust-test/faust/libraries","/home/olaf/projects/rust/faust4rust/faust-test/faust/build/share/faust","/usr/local/share/faust","/usr/share/faust",".","/home/olaf/projects/rust/faust4rust/faust-test/faust/build/bin"],
+	"library_list": [],
+	"include_pathnames": [],
 	"size": 48,
 	"inputs": 2,
 	"outputs": 2,
@@ -185,7 +185,7 @@ fn hand_written_broken() {
 		}
 	]
 }"##;
-    let result: Result<Faust, _> = serde_json::from_str(f);
+    let result: Result<FaustJson, _> = serde_json::from_str(f);
     assert!(result.is_err());
 
     // match one {

@@ -1,17 +1,6 @@
-#![warn(
-    clippy::all,
-    // clippy::restriction,
-    clippy::pedantic,
-    clippy::nursery,
-    // clippy::cargo
-    unused_crate_dependencies
-)]
-
-#[cfg(test)]
-use serde_json as _;
+use std::collections::HashMap;
 
 use serde::{Deserialize, Deserializer};
-use std::collections::HashMap;
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -49,7 +38,7 @@ impl<'de> Deserialize<'de> for Meta {
         D: Deserializer<'de>,
     {
         let map: HashMap<String, Option<String>> = Deserialize::deserialize(deserializer)
-            .unwrap_or_else(|err| panic!("Error during Deserialization: {err}"));
+            .unwrap_or_else(|err| panic!("Error during Deserialization: {}", err.to_string()));
         let Some((key, Some(value))): Option<(&String, &Option<String>)> = map.iter().next() else {
             panic!("meta dictionary is unexpectedly empty")
         };

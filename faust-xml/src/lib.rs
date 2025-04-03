@@ -4,10 +4,13 @@
     clippy::pedantic,
     clippy::nursery,
     // clippy::cargo
+    unused_crate_dependencies
 )]
 
 use quick_xml::impl_deserialize_for_internally_tagged_enum;
 use serde::Deserialize;
+#[cfg(test)]
+use serde_path_to_error as _;
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
