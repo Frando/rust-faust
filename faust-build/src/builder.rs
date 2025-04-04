@@ -229,7 +229,7 @@ impl FaustBuilder {
             .unwrap_or_else(|err| {
                 panic!("json parsing error: {}", err);
             });
-        faust_ui::to_ui_code_and_rexport(&faust_json, struct_name)
+        faust_ui::generate_ui_code(&faust_json, struct_name)
     }
 
     #[must_use]

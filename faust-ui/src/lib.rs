@@ -17,7 +17,7 @@ pub mod enum_interface;
 pub mod struct_interface;
 
 #[must_use]
-pub fn to_ui_code_and_rexport(faust_json: &FaustJson, struct_name: impl AsRef<str>) -> TokenStream {
+pub fn generate_ui_code(faust_json: &FaustJson, struct_name: impl AsRef<str>) -> TokenStream {
     let struct_name = format_ident!("{}", struct_name.as_ref());
 
     let ui_static_name = format_ident!("DSP_UI");
