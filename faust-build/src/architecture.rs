@@ -17,8 +17,20 @@ impl Architecture {
     pub fn ui() -> Self {
         Self::Function(&ui)
     }
+
+    #[cfg(feature = "faust-ui")]
     #[must_use]
-    pub fn get_file_path(&self) -> Option<&Path> {
+    pub fn mod_ui() -> Self {
+        Self::Function(&mod_ui)
+    }
+
+    #[must_use]
+    pub fn file(path: PathBuf) -> Self {
+        Self::File(path)
+    }
+
+    #[must_use]
+    pub(crate) fn get_file_path(&self) -> Option<&Path> {
         match self {
             Self::File(arch_file) => Some(arch_file),
             _ => None,
@@ -44,11 +56,7 @@ impl Architecture {
                 architecture_interface.apply(builder, &ts)
             }
             Self::File(_path_buf) => {
-                let struct_name: &str = builder.get_struct_name();
-                let dsp_code = dsp_code
-                    .replace("<<moduleName>>", "dsp")
-                    .replace("<<structName>>", struct_name);
-                parse_str::<TokenStream>(&dsp_code).expect("Failed to parse string into tokens")
+                parse_str::<TokenStream>(dsp_code).expect("Failed to parse string into tokens")
             }
         }
     }
@@ -66,23 +74,22 @@ pub trait ObjectInterface {
 #[must_use]
 pub fn default(_builder: &FaustBuilder, dsp_code: &TokenStream) -> TokenStream {
     quote! {
-            #![allow(clippy::all)]
-            #![allow(unused_parens)]
-            #![allow(non_snake_case)]
-            #![allow(non_camel_case_types)]
-            #![allow(dead_code)]
-            #![allow(unused_variables)]
-            #![allow(unused_mut)]
-            #![allow(non_upper_case_globals)]
-            use faust_types::*;
-            #dsp_code
+        #![allow(clippy::all)]
+        #![allow(unused_parens)]
+        #![allow(non_snake_case)]
+        #![allow(non_camel_case_types)]
+        #![allow(dead_code)]
+        #![allow(unused_variables)]
+        #![allow(unused_mut)]
+        #![allow(non_upper_case_globals)]
+        use faust_types::*;
+        #dsp_code
     }
 }
 
 #[cfg(feature = "faust-ui")]
 #[must_use]
 fn ui(builder: &FaustBuilder, dsp_code: &TokenStream) -> TokenStream {
-    let module_name = builder.get_module_name();
     let struct_name = builder.get_struct_name();
     let json_path = builder.get_json_path();
     match std::fs::exists(&json_path) {
@@ -91,13 +98,42 @@ fn ui(builder: &FaustBuilder, dsp_code: &TokenStream) -> TokenStream {
         }
         Err(err) => core::panic!("json file not found at path: {:?}", err),
     }
-    let (ui_code, ui_reexport) =
-        FaustBuilder::get_ui_from_json(&json_path, module_name, struct_name);
+    let ui_code = FaustBuilder::generate_ui_from_json(&json_path, struct_name);
+    quote! {
+        #![allow(clippy::all)]
+        #![allow(unused_parens)]
+        #![allow(non_snake_case)]
+        #![allow(non_camel_case_types)]
+        #![allow(dead_code)]
+        #![allow(unused_variables)]
+        #![allow(unused_mut)]
+        #![allow(non_upper_case_globals)]
+        use faust_types::*;
+        #dsp_code
+        #ui_code
+    }
+}
+
+#[cfg(feature = "faust-ui")]
+#[must_use]
+fn mod_ui(builder: &FaustBuilder, dsp_code: &TokenStream) -> TokenStream {
+    let module_name = builder
+        .get_module_name()
+        .as_ref()
+        .expect("module name needed y mod ui architecture function");
+    let struct_name = builder.get_struct_name();
+    let json_path = builder.get_json_path();
+    match std::fs::exists(&json_path) {
+        Ok(b) => {
+            assert!(b, "json file not found at path: {:?}", json_path);
+        }
+        Err(err) => core::panic!("json file not found at path: {:?}", err),
+    }
+    let ui_code = FaustBuilder::generate_ui_from_json(&json_path, struct_name);
 
     let module_name = quote::format_ident!("{}", module_name);
-    let struct_name = quote::format_ident!("{}", struct_name);
     quote! {
-        mod #module_name {
+        pub mod #module_name {
             #![allow(clippy::all)]
             #![allow(unused_parens)]
             #![allow(non_snake_case)]
@@ -110,9 +146,6 @@ fn ui(builder: &FaustBuilder, dsp_code: &TokenStream) -> TokenStream {
             #dsp_code
             #ui_code
         }
-
-        pub use #module_name::#struct_name;
-        #ui_reexport
     }
 }
 
@@ -121,7 +154,6 @@ fn ui(builder: &FaustBuilder, dsp_code: &TokenStream) -> TokenStream {
 
 // impl ArchitectureInterface for ArchitectureUI {
 //     fn wrap(&self, builder: &FaustBuilder, dsp_code: TokenStream) -> TokenStream {
-//         let module_name = builder.get_module_name();
 //         let struct_name = builder.get_struct_name();
 //         let json_path = builder.get_json_path();
 //         match fs::exists(&json_path) {
@@ -130,13 +162,10 @@ fn ui(builder: &FaustBuilder, dsp_code: &TokenStream) -> TokenStream {
 //             }
 //             Err(err) => panic!("json file not found at path: {:?}", err),
 //         }
-//         let (ui_code, ui_reexport) =
-//             FaustBuilder::get_ui_from_json(&json_path, module_name, struct_name);
-
-//         let module_name = format_ident!("{}", module_name);
+//         let ui_code =
+//             FaustBuilder::get_ui_from_json(&json_path, struct_name);
 //         let struct_name = format_ident!("{}", struct_name);
 //         quote! {
-//             mod #module_name {
 //                 #![allow(clippy::all)]
 //                 #![allow(unused_parens)]
 //                 #![allow(non_snake_case)]
@@ -149,9 +178,6 @@ fn ui(builder: &FaustBuilder, dsp_code: &TokenStream) -> TokenStream {
 //                 #dsp_code
 //                 #ui_code
 //             }
-
-//             pub use #module_name::#struct_name;
-//             #ui_reexport
 //         }
 //     }
 // }

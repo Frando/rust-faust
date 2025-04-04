@@ -86,10 +86,7 @@ pub fn build_faust_file_from_macro(args: FileMacroArgs) -> proc_macro2::TokenStr
     );
 
     let builder = FaustBuilder::default_for_include_macro(dsp_path, flags);
-    // let build =
     builder.build()
-    // //a bit stupid to parse the string again to a token stream
-    // parse_str::<TokenStream>(&build).unwrap()
 }
 
 #[cfg(feature = "faust-ui")]
@@ -106,6 +103,4 @@ pub fn build_dsp_code_from_macro(input: &proc_macro2::TokenStream) -> proc_macro
     let dsp_code = builder.build();
     builder.write_debug_json_file(&builder.get_struct_name().to_snake_case());
     dsp_code
-    //a bit stupid to parse the string again to a token stream
-    // parse_str::<TokenStream>(&build).expect("Failed to parse generated rust code as TokenStream")
 }

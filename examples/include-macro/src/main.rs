@@ -1,14 +1,13 @@
-use std::{thread, time::Duration};
-
 use faust_state::DspHandle;
 use jack_utils::run_dsp_as_jack_client;
+use std::{thread, time::Duration};
 
-mod faust {
-    faust_macro::include!("dsp/volume.dsp", [Single]);
-}
+faust_macro::include!("dsp/volume.dsp", [Single]);
+
+faust_macro::include!("dsp/volume2.dsp", [Single]);
 
 fn main() {
-    let (dsp, mut state) = DspHandle::<faust::Dbmeter>::new();
+    let (dsp, mut state) = DspHandle::<volume::Dbmeter>::new();
     eprintln!("client name: {}", dsp.name());
     eprintln!("inputs: {}", dsp.num_inputs());
     eprintln!("outputs: {}", dsp.num_outputs());

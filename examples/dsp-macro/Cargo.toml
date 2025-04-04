@@ -13,5 +13,3 @@ faust-state = { path = "../../faust-state" }
 jack-utils = { path = "../jack-utils" }
 strum = { version = "0.27", features = ["derive"] }
 
-[build-dependencies]
-faust-build = { path = "../../faust-build" }

@@ -7,7 +7,7 @@ fn main() {
     let dest_path = Path::new(&out_dir).join("dsp.rs");
 
     let mut b = FaustBuilder::default_for_file("dsp/volume.dsp", dest_path);
-    b.set_architecture(Architecture::File(
+    b.set_architecture(Architecture::file(
         "../../faust-build/faust-template.rs".into(),
     ));
     b.struct_name_from_dsp_name();

@@ -78,7 +78,9 @@ impl<'a> FaustArgsToCommandArgs<'a> for &'a CodeOptionMap {
 #[derive(Debug, Clone, Eq, EnumDiscriminants, EnumIs, EnumString)]
 #[strum_discriminants(derive(Hash))]
 pub enum CodeOption {
-    //                                           'lang' should be c, cpp (default), cmajor, codebox, csharp, dlang, fir, interp, java, jax, jsfx, julia, llvm, ocpp, rust, vhdl or wast/wasm.
+    // Code generation options:
+    // ---------------------------------------
+    // ...
     //   -single     --single-precision-floats   use single precision floats for internal computations (default).
     Single,
     //   -double     --double-precision-floats   use double precision floats for internal computations.

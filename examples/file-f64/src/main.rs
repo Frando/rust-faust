@@ -1,9 +1,9 @@
-use dsp::{DspUI, UIActive, UIActiveValue, UIPassive, Volume};
+use dsp::{Amplifer, UIActive, UIActiveValue, UIPassive, DSP_UI};
 use faust_types::{UIGet, UISelfSet, UISet};
 pub mod dsp;
 
 fn main() {
-    let mut dsp = Volume::new();
+    let mut dsp = Amplifer::new();
     dsp.init(44_100);
     UIActive::Channel0Volume.set(&mut dsp, 1.0f64);
     UIActiveValue::Channel1Volume(10.0f64).set(&mut dsp);
@@ -12,5 +12,5 @@ fn main() {
     dsp.compute(1, &ib, &mut ob);
     //two ways to access values returned from the dsp:
     println!("{:?}", UIPassive::Channel0Level.get_enum(&dsp));
-    println!("{}", DspUI.volume.channel_1.level.get_value(&dsp));
+    println!("{}", DSP_UI.channel_1.level.get_value(&dsp));
 }

@@ -8,8 +8,7 @@
     clippy::unwrap_used
 )]
 #![allow(clippy::missing_panics_doc)]
-// #![allow(clippy::missing_const_for_fn)]
-// #![allow(clippy::or_fun_call)]
+#![allow(clippy::missing_const_for_fn)]
 
 use std::ffi::OsStr;
 
@@ -23,7 +22,7 @@ pub mod macro_lib;
 
 /// Trait to transform a Vector o`FaustArgs`gs into a Vector`OsStr`sStr references.
 ///
-/// `FaustArgs` cannot simply be tranlated into an &`OsStr` because one enum variant might produce two command arguments
+/// `FaustArgs` cannot simply be translated into an &`OsStr` because one enum variant might produce two command arguments
 pub trait FaustArgsToCommandArgs<'a> {
     fn to_command_args(self) -> Vec<&'a OsStr>;
 }

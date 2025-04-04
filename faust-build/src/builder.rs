@@ -1,5 +1,6 @@
 #![allow(clippy::missing_errors_doc)]
 #![allow(clippy::module_name_repetitions)]
+#![allow(clippy::missing_const_for_fn)]
 
 use crate::{
     architecture::Architecture,
@@ -21,8 +22,6 @@ use std::{
 };
 use tempfile::{NamedTempFile, TempPath};
 
-static DEFAULT_MODULE_NAME: &str = "dsp";
-
 pub struct FaustBuilder {
     faust_path: PathBuf,
     code_gen_options: CodeOptionMap,
@@ -36,7 +35,7 @@ impl Default for FaustBuilder {
         Self {
             faust_path: "faust".into(),
             code_gen_options: CodeOptionMap::default(),
-            module_name: Some("dsp".to_owned()),
+            module_name: None,
             out_path: None,
             compile_options: CompileOptions::default(),
         }
@@ -93,7 +92,6 @@ impl FaustBuilder {
         b.set_dsp_path(dsp_path);
         b.set_out_path(out_path);
         b.struct_name_from_dsp_name();
-        b.module_name_from_dsp_file_path();
         b.write_json_file();
         b.set_architecture(Architecture::ui());
         b
@@ -104,7 +102,6 @@ impl FaustBuilder {
         b.set_dsp_path(dsp_path);
         b.set_out_path(out_path);
         b.struct_name_from_dsp_name();
-        b.module_name_from_dsp_file_path();
         b
     }
 
@@ -116,7 +113,7 @@ impl FaustBuilder {
         builder.set_dsp_path(dsp_path);
         builder.struct_name_from_dsp_name();
         builder.module_name_from_dsp_file_path();
-        builder.set_architecture(Architecture::ui());
+        builder.set_architecture(Architecture::mod_ui());
         builder.extend_code_options(extra_flags);
         builder
     }
@@ -129,7 +126,7 @@ impl FaustBuilder {
         builder.write_json_file();
         builder.struct_name_from_dsp_name();
         builder.module_name_from_struct_name();
-        builder.set_architecture(Architecture::ui());
+        builder.set_architecture(Architecture::mod_ui());
         builder.extend_code_options(extra_flags);
         builder
     }
@@ -210,7 +207,7 @@ impl FaustBuilder {
 
     pub fn module_name_from_struct_name(&mut self) {
         let struct_name = self.get_struct_name();
-        self.module_name = Some(format!("dsp_{}", struct_name.to_string().to_snake_case()));
+        self.module_name = Some(struct_name.to_snake_case());
     }
 
     #[must_use]
@@ -222,18 +219,17 @@ impl FaustBuilder {
     }
 
     #[cfg(feature = "faust-ui")]
-    pub fn get_ui_from_json(
+    pub fn generate_ui_from_json(
         json_path: &Path,
-        module_name: impl AsRef<str>,
         struct_name: impl AsRef<str>,
-    ) -> (proc_macro2::TokenStream, proc_macro2::TokenStream) {
+    ) -> proc_macro2::TokenStream {
         let json_file = std::fs::File::open(json_path).expect("Failed to open json file");
         let json_reader = std::io::BufReader::new(json_file);
         let faust_json: faust_json::FaustJson = serde_json::from_reader(json_reader)
             .unwrap_or_else(|err| {
                 panic!("json parsing error: {}", err);
             });
-        faust_ui::to_ui_code_and_rexport(&faust_json, module_name, struct_name)
+        faust_ui::to_ui_code_and_rexport(&faust_json, struct_name)
     }
 
     #[must_use]
@@ -249,10 +245,8 @@ impl FaustBuilder {
     }
 
     #[must_use]
-    pub fn get_module_name(&self) -> &str {
-        self.module_name
-            .as_ref()
-            .map_or(DEFAULT_MODULE_NAME, |module_name| module_name)
+    pub fn get_module_name(&self) -> &Option<String> {
+        &self.module_name
     }
 
     #[must_use]
@@ -283,7 +277,6 @@ impl FaustBuilder {
     }
 
     pub fn write_debug_dsp_file(&self, name: &str) {
-        // define paths for .dsp files that help debugging
         let debug_dsp = Path::new(
             &(env::var_os("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR env var not set")),
         )
@@ -334,8 +327,8 @@ fn strip_quotes(name: &proc_macro2::TokenTree) -> String {
         .to_string()
 }
 
+/// find the token that declares a key in the dsp file
 pub(crate) fn get_declared_value(key: &str, ts: proc_macro2::TokenStream) -> Option<String> {
-    // find the token that declares a key in the dsp file
     let mut ii = ts.into_iter();
     while let Some(n) = ii.next() {
         if n.to_string() == "declare" {

@@ -1,4 +1,4 @@
-use dsp::{UIActive, UIActiveValue, UIPassive, UIPassiveValue, Volume};
+use dsp::{UIActive, UIActiveValue, UIPassive, UIPassiveValue, Volume, DSP_UI};
 use faust_types::{FaustDsp, UIGet, UISelfSet};
 use std::{
     io,
@@ -19,7 +19,7 @@ fn main() {
     eprintln!("outputs: {num_outputs}");
     eprintln!("active params: {:?}", UIActive::VARIANTS);
     eprintln!("passive params: {:?}", UIPassive::VARIANTS);
-    eprintln!("UI: {:#?}", dsp::DspUI);
+    eprintln!("UI: {:#?}", DSP_UI);
 
     sleep(Duration::from_secs(3));
     // wait-free buffers for control io
@@ -27,7 +27,7 @@ fn main() {
         triple_buffer(&[UIActiveValue::Volume(-70.0f32); UIActiveValue::COUNT]);
     let (mut send_passive, mut recv_passive) =
         triple_buffer(&[UIPassiveValue::Level(-70.0f32); UIPassiveValue::COUNT]);
-    let enum_vol = dsp::DspUI.volume.volume;
+    let enum_vol = DSP_UI.volume;
 
     // Spawn a thread to do state changes.
     // This could be a GUI thread or API server.

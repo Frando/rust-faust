@@ -12,34 +12,6 @@ const UIENUMPASSIVE: &str = "Passive";
 const UIENUMDISCRIMINANTS: &str = "Discriminants";
 
 #[must_use]
-pub fn reexport_active_tokenstream(has_active: bool, module_name: &Ident) -> TokenStream {
-    if has_active {
-        let ui_enum = enum_active_value_ident();
-        let ui_enum_discriminant = alias_active_ident();
-        quote! {
-            pub use #module_name::#ui_enum;
-            pub use #module_name::#ui_enum_discriminant;
-        }
-    } else {
-        proc_macro2::TokenStream::new()
-    }
-}
-
-#[must_use]
-pub fn reexport_passive_tokenstream(has_passive: bool, module_name: &Ident) -> TokenStream {
-    if has_passive {
-        let ui_enum = enum_passive_value_ident();
-        let ui_enum_discriminant = alias_passive_ident();
-        quote! {
-            pub use #module_name::#ui_enum;
-            pub use #module_name::#ui_enum_discriminant;
-        }
-    } else {
-        proc_macro2::TokenStream::new()
-    }
-}
-
-#[must_use]
 pub fn enum_active_value_ident() -> Ident {
     format_ident!("{UIENUMPREFIX}{UIENUMACTIVE}{UIENUMVALUE}")
 }
@@ -288,43 +260,37 @@ fn create_passive_impl(infos: &[&ParamInfo], dsp_name: &Ident) -> TokenStream {
     }
 }
 
-fn create_from_paraminfo(v: &[ParamInfo], dsp_name: &Ident) -> (TokenStream, bool, bool) {
+fn create_from_paraminfo(v: &[ParamInfo], dsp_name: &Ident) -> TokenStream {
     let active: Vec<&ParamInfo> = v.iter().filter(|i| i.is_active).collect();
     let passive: Vec<&ParamInfo> = v.iter().filter(|i| !i.is_active).collect();
-    let (active_enum, active_impl, has_active) = if active.is_empty() {
-        (TokenStream::new(), TokenStream::new(), false)
+    let (active_enum, active_impl) = if active.is_empty() {
+        (TokenStream::new(), TokenStream::new())
     } else {
         (
             create_qualified_enum(&active, true),
             create_active_impl(&active, dsp_name),
-            true,
         )
     };
-    let (passive_enum, passive_impl, has_passive) = if passive.is_empty() {
-        (TokenStream::new(), TokenStream::new(), false)
+    let (passive_enum, passive_impl) = if passive.is_empty() {
+        (TokenStream::new(), TokenStream::new())
     } else {
         (
             create_qualified_enum(&passive, false),
             create_passive_impl(&passive, dsp_name),
-            true,
         )
     };
-    (
-        quote::quote! {
-            use strum::{Display,EnumIter,EnumCount,EnumDiscriminants,VariantArray,VariantNames};
+    quote::quote! {
+        use strum::{Display,EnumIter,EnumCount,EnumDiscriminants,VariantArray,VariantNames};
 
-            #active_enum
-            #active_impl
-            #passive_enum
-            #passive_impl
-        },
-        has_active,
-        has_passive,
-    )
+        #active_enum
+        #active_impl
+        #passive_enum
+        #passive_impl
+    }
 }
 
 #[must_use]
-pub fn create(dsp_json: &FaustJson, dsp_name: &Ident) -> (TokenStream, bool, bool) {
+pub fn create(dsp_json: &FaustJson, dsp_name: &Ident) -> TokenStream {
     let param_info = dsp_json.get_param_info();
     create_from_paraminfo(&param_info, dsp_name)
 }
