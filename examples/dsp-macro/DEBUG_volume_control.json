@@ -1,6 +1,6 @@
 {
 	"name": "VolumeControl",
-	"filename": ".tmpKpkxh0",
+	"filename": ".tmpGQoidO",
 	"version": "2.77.3",
 	"compile_options": "-lang rust -ct 1 -cn VolumeControl -es 1 -mcd 16 -mdd 1024 -mdy 33 -single -ftz 0",
 	"library_list": ["/nix/store/qhh3c34wz4m1h2dximgl6zp79m6k2qnd-faust-2.77.3/share/faust/stdfaust.lib","/nix/store/qhh3c34wz4m1h2dximgl6zp79m6k2qnd-faust-2.77.3/share/faust/basics.lib","/nix/store/qhh3c34wz4m1h2dximgl6zp79m6k2qnd-faust-2.77.3/share/faust/signals.lib","/nix/store/qhh3c34wz4m1h2dximgl6zp79m6k2qnd-faust-2.77.3/share/faust/maths.lib","/nix/store/qhh3c34wz4m1h2dximgl6zp79m6k2qnd-faust-2.77.3/share/faust/platform.lib"],
@@ -14,7 +14,7 @@
 		{ "basics.lib/tabulateNd": "Copyright (C) 2023 Bart Brouns <bart@magnetophon.nl>" },
 		{ "basics.lib/version": "1.21.0" },
 		{ "compile_options": "-lang rust -ct 1 -cn VolumeControl -es 1 -mcd 16 -mdd 1024 -mdy 33 -single -ftz 0" },
-		{ "filename": ".tmpKpkxh0" },
+		{ "filename": ".tmpGQoidO" },
 		{ "flags": "-single" },
 		{ "license": "BSD" },
 		{ "maths.lib/author": "GRAME" },

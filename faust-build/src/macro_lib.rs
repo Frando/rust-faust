@@ -62,9 +62,16 @@ impl FileMacroArgs {
 impl Parse for FileMacroArgs {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         let dsp_path = input.parse()?;
-        let _comma: Token![,] = input.parse()?;
-        let flags = Self::parse_enums(input.parse()?)?;
-        Ok(Self { dsp_path, flags })
+        if input.is_empty() {
+            Ok(Self {
+                dsp_path,
+                flags: Vec::new(),
+            })
+        } else {
+            let _comma: Token![,] = input.parse()?;
+            let flags = Self::parse_enums(input.parse()?)?;
+            Ok(Self { dsp_path, flags })
+        }
     }
 }
 

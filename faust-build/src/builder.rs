@@ -7,7 +7,7 @@ use crate::{
     code_option::{CodeOption, CodeOptionDiscriminants, CodeOptionMap},
     compile_options::CompileOptions,
     dsp_path::DspPath,
-    FaustArgsToCommandArgs,
+    CodeOptionToCommandArgs,
 };
 use heck::{CamelCase, SnakeCase};
 use proc_macro2::TokenStream;
@@ -135,7 +135,7 @@ impl FaustBuilder {
     pub fn run_faust(&self) -> String {
         let faust_result = Command::new(&self.faust_path)
             .args(self.compile_options.to_command_args())
-            .args(FaustArgsToCommandArgs::to_command_args(
+            .args(CodeOptionToCommandArgs::to_command_args(
                 &self.code_gen_options,
             ))
             .output()

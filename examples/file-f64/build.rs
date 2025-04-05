@@ -3,6 +3,7 @@ use faust_build::{architecture::Architecture, builder::FaustBuilder, code_option
 fn main() {
     println!("cargo:rerun-if-changed=dsp");
     //example of setting up compilation
+    // without any conveniens functions
     let mut b = FaustBuilder::default();
     b.set_dsp_path("dsp/volume.dsp");
     b.set_out_path("src/dsp.rs");

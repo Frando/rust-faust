@@ -36,7 +36,7 @@ fn main() {
     eprintln!("params: {:#?}", state.params());
     eprintln!("meta: {:#?}", state.meta());
 
-    let mut volume = -70.;
+    let mut volume = -70.0;
 
     // Spawn a thread to do state changes.
     // This could be a GUI thread or API server.
@@ -45,9 +45,9 @@ fn main() {
         // It also reports the current output level of the signal.
         eprintln!("volume: {} dB", state.get_by_path("volume").unwrap());
         eprintln!("level:  {} dB", state.get_by_path("level").unwrap());
-        volume += 10.;
-        if volume > 4. {
-            volume = -70.;
+        volume += 10.0;
+        if volume > 4.0 {
+            volume = -70.0;
         }
         let _ = state.set_by_path("volume", volume);
         state.send();

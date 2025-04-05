@@ -1,6 +1,6 @@
 #![allow(clippy::module_name_repetitions)]
 
-use crate::{FaustArgsToCommandArgs, FaustArgsToCommandArgsRef};
+use crate::{CodeOptionToCommandArgs, CodeOptionsToCommandArgsRef};
 use std::{
     collections::{hash_map::IntoValues, HashMap, HashSet},
     ffi::OsStr,
@@ -38,7 +38,7 @@ impl CodeOptionMap {
             })
             .collect::<Vec<_>>();
 
-        FaustArgsToCommandArgs::to_command_args(values)
+        CodeOptionToCommandArgs::to_command_args(values)
     }
 }
 
@@ -69,9 +69,9 @@ impl IntoIterator for CodeOptionMap {
     type IntoIter = IntoValues<CodeOptionDiscriminants, CodeOption>;
 }
 
-impl<'a> FaustArgsToCommandArgs<'a> for &'a CodeOptionMap {
+impl<'a> CodeOptionToCommandArgs<'a> for &'a CodeOptionMap {
     fn to_command_args(self) -> Vec<&'a OsStr> {
-        FaustArgsToCommandArgs::to_command_args(self.0.values())
+        CodeOptionToCommandArgs::to_command_args(self.0.values())
     }
 }
 
@@ -404,7 +404,7 @@ impl PartialEq for CodeOption {
     }
 }
 
-impl<'a> FaustArgsToCommandArgsRef<'a> for CodeOption {
+impl<'a> CodeOptionsToCommandArgsRef<'a> for CodeOption {
     fn to_command_args(&'a self) -> Vec<&'a OsStr> {
         match self {
             Self::Single => vec!["-single".as_ref() as &OsStr],

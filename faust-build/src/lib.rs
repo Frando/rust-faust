@@ -23,22 +23,22 @@ pub mod macro_lib;
 /// Trait to transform a Vector o`FaustArgs`gs into a Vector`OsStr`sStr references.
 ///
 /// `FaustArgs` cannot simply be translated into an &`OsStr` because one enum variant might produce two command arguments
-pub trait FaustArgsToCommandArgs<'a> {
+pub trait CodeOptionToCommandArgs<'a> {
     fn to_command_args(self) -> Vec<&'a OsStr>;
 }
 
-pub trait FaustArgsToCommandArgsRef<'a> {
+pub trait CodeOptionsToCommandArgsRef<'a> {
     fn to_command_args(&'a self) -> Vec<&'a OsStr>;
 }
 
-impl<'a, T, V> FaustArgsToCommandArgs<'a> for T
+impl<'a, T, V> CodeOptionToCommandArgs<'a> for T
 where
     T: IntoIterator<Item = &'a V>,
-    V: FaustArgsToCommandArgsRef<'a> + 'a,
+    V: CodeOptionsToCommandArgsRef<'a> + 'a,
 {
     fn to_command_args(self) -> Vec<&'a OsStr> {
         let i = self.into_iter();
-        let m = i.flat_map(FaustArgsToCommandArgsRef::to_command_args);
+        let m = i.flat_map(CodeOptionsToCommandArgsRef::to_command_args);
         m.collect()
     }
 }

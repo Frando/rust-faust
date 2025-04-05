@@ -4,8 +4,6 @@ use std::{thread, time::Duration};
 
 faust_macro::include!("dsp/volume.dsp", [Single]);
 
-faust_macro::include!("dsp/volume2.dsp", [Single]);
-
 fn main() {
     let (dsp, mut state) = DspHandle::<volume::Dbmeter>::new();
     eprintln!("client name: {}", dsp.name());
