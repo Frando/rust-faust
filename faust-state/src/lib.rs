@@ -1,3 +1,20 @@
+#![warn(
+    clippy::all,
+    // clippy::restriction,
+    clippy::pedantic,
+    clippy::nursery,
+    // clippy::cargo
+    unused_crate_dependencies,
+    clippy::unwrap_used
+)]
+#![allow(clippy::missing_panics_doc)]
+#![allow(clippy::missing_errors_doc)]
+#![allow(clippy::wildcard_imports)]
+#![allow(clippy::missing_const_for_fn)]
+#![allow(clippy::unused_self)]
+#![allow(clippy::cast_sign_loss)]
+#![allow(deprecated)]
+
 use faust_types::*;
 use rtrb::{Consumer, Producer, RingBuffer};
 use std::{
@@ -19,6 +36,7 @@ impl<T> DspHandle<T>
 where
     T: FaustDsp<T = f32> + 'static,
 {
+    #[must_use]
     pub fn new() -> (Self, StateHandle) {
         let dsp = Box::new(T::new());
         Self::from_dsp(dsp)
@@ -49,19 +67,19 @@ where
         };
 
         let mut params_by_path = BTreeMap::new();
-        for (idx, node) in params.iter() {
+        for (idx, node) in &params {
             params_by_path.insert(node.path(), *idx);
             state.state.insert(*idx, node.widget_type().init_value());
         }
 
         let state_handle = StateHandle {
             name,
+            state,
             meta,
             params,
             params_by_path,
-            state,
-            main_tx,
             main_rx,
+            main_tx,
         };
         (this, state_handle)
     }
@@ -72,12 +90,10 @@ where
         inputs: &[&[f32]],
         outputs: &mut [&mut [f32]],
     ) {
-        let mut state = if let Ok(state) = self.dsp_rx.pop() {
+        let mut state = self.dsp_rx.pop().map_or(None, |state| {
             self.update_params_from_state(&state);
             Some(state)
-        } else {
-            None
-        };
+        });
 
         // Potentially improves the performance of SIMD floating-point math
         // by flushing denormals/underflow to zero.
@@ -106,7 +122,7 @@ where
         }
 
         if !self.dsp_tx.is_full() && state.is_some() {
-            let mut state = state.take().unwrap();
+            let mut state = state.take().expect("cannot fail");
             self.update_state_from_params(&mut state);
             let _ = self.dsp_tx.push(state);
         }
@@ -149,14 +165,14 @@ where
     }
 
     pub fn update_params_from_state(&mut self, state: &State) {
-        for (idx, value) in state.updates.iter() {
+        for (idx, value) in &state.updates {
             let idx = ParamIndex(*idx);
             self.dsp.set_param(idx, *value);
         }
     }
 
     pub fn update_state_from_params(&self, state: &mut State) {
-        for (idx, value) in state.state.iter_mut() {
+        for (idx, value) in &mut state.state {
             let idx = ParamIndex(*idx);
             if let Some(new_value) = self.dsp.get_param(idx) {
                 *value = new_value;
@@ -171,7 +187,7 @@ where
     // fn get_param(&self, param: ParamIndex) -> Option<Self::T>;
     // fn set_param(&mut self, param: ParamIndex, value: Self::T);
     pub fn compute(&mut self, count: i32, inputs: &[&[f32]], outputs: &mut [&mut [f32]]) {
-        self.dsp.compute(count, inputs, outputs)
+        self.dsp.compute(count, inputs, outputs);
     }
 
     pub fn num_inputs(&self) -> usize {
@@ -183,7 +199,7 @@ where
     }
 
     pub fn init(&mut self, sample_rate: i32) {
-        self.dsp.init(sample_rate)
+        self.dsp.init(sample_rate);
     }
 }
 
@@ -233,11 +249,9 @@ impl StateHandle {
     }
 
     pub fn get_by_path(&self, path: &str) -> Option<&f32> {
-        if let Some(idx) = self.params_by_path.get(path) {
-            self.get_param(*idx)
-        } else {
-            None
-        }
+        self.params_by_path
+            .get(path)
+            .and_then(|idx| self.get_param(*idx))
     }
 
     pub fn send(&mut self) {
@@ -251,7 +265,7 @@ impl StateHandle {
         if !self.main_tx.is_full() {
             let state = self.state.clone();
             if let Err(e) = self.main_tx.push(state) {
-                eprintln!("error sending state update: {}", e);
+                eprintln!("error sending state update: {e}");
             } else {
                 self.state.updates.clear();
             }
@@ -313,6 +327,7 @@ pub struct Node {
 }
 
 impl Node {
+    #[must_use]
     pub fn path(&self) -> String {
         let mut path = self.prefix.clone();
         if !path.is_empty() {
@@ -322,6 +337,7 @@ impl Node {
         path
     }
 
+    #[must_use]
     pub fn widget_type(&self) -> &WidgetType {
         &self.typ
     }
@@ -352,11 +368,12 @@ pub enum WidgetType {
 
 impl WidgetType {
     /// Retrieve the init value for this widget
+    #[must_use]
     pub fn init_value(&self) -> f32 {
         match self {
-            WidgetType::VerticalSlider(input) => input.init,
-            WidgetType::HorizontalSlider(input) => input.init,
-            WidgetType::NumEntry(input) => input.init,
+            Self::NumEntry(input) | Self::HorizontalSlider(input) | Self::VerticalSlider(input) => {
+                input.init
+            }
             // Buttons and checkboxes are off by default.
             // Passive widgets will need an update from the DSP before having a value
             _ => 0.0,
@@ -378,6 +395,7 @@ pub struct RangedInput {
 }
 
 impl RangedInput {
+    #[must_use]
     pub fn new(init: f32, min: f32, max: f32, step: f32) -> Self {
         Self {
             init,
@@ -396,6 +414,7 @@ pub struct RangedOutput {
 }
 
 impl RangedOutput {
+    #[must_use]
     pub fn new(min: f32, max: f32) -> Self {
         Self { range: min..=max }
     }
@@ -434,7 +453,7 @@ impl ParamsBuilder {
         typ: WidgetType,
         metadata: Option<Vec<[String; 2]>>,
     ) {
-        let prefix = self.prefix[..].join("/").to_string();
+        let prefix = self.prefix[..].join("/");
         let idx = idx.0;
         if let std::collections::hash_map::Entry::Vacant(e) = self.inner.entry(idx) {
             let node = Node {
@@ -445,7 +464,7 @@ impl ParamsBuilder {
             };
             e.insert(node);
         } else {
-            let node = self.inner.get_mut(&idx).unwrap();
+            let node = self.inner.get_mut(&idx).expect("ParamIndex not valid");
             node.label = label.to_string();
             node.typ = typ;
             if let Some(mut metadata) = metadata {
@@ -466,7 +485,7 @@ impl UI<f32> for ParamsBuilder {
         self.open_group(label);
     }
     fn close_box(&mut self) {
-        self.close_group()
+        self.close_group();
     }
 
     // -- active widgets
@@ -532,7 +551,7 @@ impl UI<f32> for ParamsBuilder {
                     param_index,
                     WidgetType::default(),
                     Some(vec![[key.to_string(), value.to_string()]]),
-                )
+                );
             } else if let Some(node) = self.inner.get_mut(&param_index.0) {
                 node.metadata.push([key.to_string(), value.to_string()]);
             }

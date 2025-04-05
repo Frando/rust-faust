@@ -1,0 +1,50 @@
+{
+	"name": "dbmeter",
+	"filename": "volume.dsp",
+	"version": "2.77.3",
+	"compile_options": "-lang rust -ct 1 -cn Dbmeter -es 1 -mcd 16 -mdd 1024 -mdy 33 -single -ftz 0",
+	"library_list": ["/nix/store/qhh3c34wz4m1h2dximgl6zp79m6k2qnd-faust-2.77.3/share/faust/stdfaust.lib","/nix/store/qhh3c34wz4m1h2dximgl6zp79m6k2qnd-faust-2.77.3/share/faust/basics.lib","/nix/store/qhh3c34wz4m1h2dximgl6zp79m6k2qnd-faust-2.77.3/share/faust/maths.lib","/nix/store/qhh3c34wz4m1h2dximgl6zp79m6k2qnd-faust-2.77.3/share/faust/platform.lib"],
+	"include_pathnames": ["/nix/store/qhh3c34wz4m1h2dximgl6zp79m6k2qnd-faust-2.77.3/share/faust","/usr/local/share/faust","/usr/share/faust","/home/olaf/projects/rust/forks/rust-faust/examples/include-macro/dsp","/home/olaf/projects/rust/forks/rust-faust/examples/include-macro/dsp"],
+	"size": 20,
+	"inputs": 1,
+	"outputs": 1,
+	"meta": [ 
+		{ "author": "Grame" },
+		{ "basics.lib/name": "Faust Basic Element Library" },
+		{ "basics.lib/tabulateNd": "Copyright (C) 2023 Bart Brouns <bart@magnetophon.nl>" },
+		{ "basics.lib/version": "1.21.0" },
+		{ "compile_options": "-lang rust -ct 1 -cn Dbmeter -es 1 -mcd 16 -mdd 1024 -mdy 33 -single -ftz 0" },
+		{ "copyright": "(c)GRAME 2006" },
+		{ "filename": "volume.dsp" },
+		{ "license": "BSD" },
+		{ "maths.lib/author": "GRAME" },
+		{ "maths.lib/copyright": "GRAME" },
+		{ "maths.lib/license": "LGPL with exception" },
+		{ "maths.lib/name": "Faust Math Library" },
+		{ "maths.lib/version": "2.8.1" },
+		{ "name": "dbmeter" },
+		{ "platform.lib/name": "Generic Platform Library" },
+		{ "platform.lib/version": "1.3.0" },
+		{ "version": "1.0" }
+	],
+	"ui": [ 
+		{
+			"type": "vgroup",
+			"label": "dbmeter",
+			"items": [ 
+				{
+					"type": "vbargraph",
+					"label": "channel0",
+					"varname": "fVbargraph0",
+					"shortname": "channel0",
+					"address": "/dbmeter/channel0",
+					"meta": [
+						{ "unit": "dB" }
+					],
+					"min": -70,
+					"max": 10
+				}
+			]
+		}
+	]
+}
