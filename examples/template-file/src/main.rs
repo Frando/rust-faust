@@ -3,14 +3,10 @@ use std::{thread, time::Duration};
 use faust_state::DspHandle;
 use jack_utils::run_dsp_as_jack_client;
 
-mod faust {
-    include!(concat!(env!("OUT_DIR"), "/dsp.rs"));
-}
-
-
+include!(concat!(env!("OUT_DIR"), "/dsp.rs"));
 
 fn main() {
-    let (dsp, mut state) = DspHandle::<faust::Dbmeter>::new();
+    let (dsp, mut state) = DspHandle::<dsp::Dbmeter>::new();
     eprintln!("client name: {}", dsp.name());
     eprintln!("inputs: {}", dsp.num_inputs());
     eprintln!("outputs: {}", dsp.num_outputs());
