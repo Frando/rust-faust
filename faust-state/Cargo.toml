@@ -8,5 +8,5 @@ edition = "2018"
 
 [dependencies]
 rtrb = "0.1.3"
-#faust-types = { git = "http://github.com/Frando/rust-faust.git" }
-faust-types = { path = "../faust-types" }
+faust-types = { git = "http://github.com/Frando/rust-faust.git" }
+#faust-types = { path = "../faust-types" }

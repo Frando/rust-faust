@@ -1,4 +1,4 @@
-mod <<moduleName>> {
+pub mod <<moduleName>>{
     #![allow(clippy::all)]
     #![allow(unused_parens)]
     #![allow(non_snake_case)]
@@ -10,7 +10,5 @@ mod <<moduleName>> {
     
     use faust_types::*;
     <<includeIntrinsic>>
-    <<includeclass>>
+    <<includeclass>>   
 }
-
-pub use <<moduleName>>::<<structName>>;

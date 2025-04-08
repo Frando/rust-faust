@@ -21,16 +21,31 @@ enum StructInfo {
 }
 
 impl StructInfo {
+    #[allow(unused_variables)]
+    pub fn get_label(&self) -> String {
+        match self {
+            Self::GroupInfo {
+                label,
+                type_name,
+                items,
+            } => label.to_string(),
+            Self::UIInfo {
+                label,
+                type_name,
+                shortname,
+            } => label.to_string(),
+        }
+    }
     pub fn active(label: &str, shortname: &str) -> Self {
         Self::UIInfo {
-            type_name: enum_interface::alias_active_ident(),
+            type_name: enum_interface::enum_active_discriminants_ident(),
             label: format_ident!("{label}"),
             shortname: format_ident!("{shortname}"),
         }
     }
     pub fn passive(label: &str, shortname: &str) -> Self {
         Self::UIInfo {
-            type_name: enum_interface::alias_passive_ident(),
+            type_name: enum_interface::enum_passive_discriminants_ident(),
             label: format_ident!("{label}"),
             shortname: format_ident!("{shortname}"),
         }
@@ -190,20 +205,24 @@ fn create_structs(si: &StructInfo) -> TokenStream {
 }
 
 pub fn create(dsp_json: &FaustJson, ui_static_name: &Ident, ui_type: &Ident) -> TokenStream {
-    let ui_info_tree = vec![StructInfo::GroupInfo {
-        type_name: ui_type.clone(),
-        label: ui_static_name.clone(),
-        items: dsp_json
-            .ui
-            .iter()
-            .map(|items| items.get_ui_structure(ui_type))
-            .collect(),
-    }];
+    let ui_info_tree = dsp_json
+        .ui
+        .iter()
+        .map(|items| items.get_ui_structure(ui_type))
+        .collect::<Vec<_>>();
+    assert_eq!(ui_info_tree.len(), 1);
+    let head_label = ui_info_tree
+        .first()
+        .expect("cannot fail")
+        .get_label()
+        .to_camel_case();
+    let head_type = format_ident!("{ui_type}{}", head_label);
+
     // i need to unroll the tree into a list of structs
     let ui_info_list = flat_ui_infos(&ui_info_tree);
     let ui_structs: TokenStream = ui_info_list.iter().map(create_structs).collect();
     let ui_global = quote! {
-        pub static #ui_static_name: #ui_type = #ui_type::static_ui();
+        pub static #ui_static_name: #head_type = #head_type::static_ui();
     };
     quote! {
         #ui_structs

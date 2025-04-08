@@ -8,10 +8,25 @@ description = "Build FAUST dsp files into Rust modules as part of the normal cra
 readme = "../README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+default = []
+# default = ["faust-ui"]
+faust-ui = ["dep:faust-ui","dep:serde_json","dep:faust-json"]
 
 [dependencies]
-tempfile = "3.2.0"
-heck = "0.3.2"
+tempfile =  { version = "3.2.0" }
+heck =  { version = "0.3.2" }
+prettyplease =  { version = "^0.2" }
+proc-macro2 = { version = "*" }
+quote = { version = "^1" }
+syn = { version = "^2.0", default-features = false }
+strum = { version = "0.27", features = ["derive"] }
+#dependencies for faust-ui
+faust-json = { git = "http://github.com/Frando/rust-faust.git",optional = true}
+# faust-json =  { path = "../faust-json" , optional = true}
+serde_json = { version = "^1", optional = true }
+faust-ui = { git = "http://github.com/Frando/rust-faust.git",optional = true}
+# faust-ui =  { path = "../faust-ui", optional = true }
 
 [build-dependencies]
 regex = "*"

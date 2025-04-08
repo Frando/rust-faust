@@ -7,7 +7,8 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-faust-json =  { path = "../faust-json" }
+faust-json = { git = "http://github.com/Frando/rust-faust.git"}
+# faust-json =  { path = "../faust-json" }
 
 quote = "^1.0"
 syn = "^2.0"

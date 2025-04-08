@@ -1,0 +1,23 @@
+[package]
+name = "file-f64"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+default = ["default-boxed"]
+
+[dependencies]
+faust-types = { path = "../../faust-types" }
+default-boxed = { version = "*", optional = true}
+strum = { version = "0.27", features = ["derive"] }
+
+[build-dependencies]
+faust-build = { path = "../../faust-build" }
+faust-json =  { path = "../../faust-json" }
+serde_json = "*"
+quote = "^1.0"
+prettyplease = "^0.2"
+syn = "^2.0"
+proc-macro2 = "*"

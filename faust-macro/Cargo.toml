@@ -1,7 +1,7 @@
 [package]
 name = "faust-macro"
-version = "0.1.0"
-authors = ["olafklingt"]
+version = "0.2.0"
+authors = ["olafklingt","crop2000"]
 edition = "2021"
 license = "MIT OR Apache-2.0"
 
@@ -12,8 +12,7 @@ license = "MIT OR Apache-2.0"
 proc-macro = true
 
 [features]
-debug = []
 
 [dependencies]
-faust-build = { git = "http://github.com/Frando/rust-faust.git" }
-tempfile = "3.2.0"
+faust-build = { git = "http://github.com/Frando/rust-faust.git" ,features = ["faust-ui"]}
+syn = { version = "^2.0", default-features = false }
