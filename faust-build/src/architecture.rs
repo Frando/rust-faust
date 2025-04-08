@@ -37,6 +37,7 @@ impl Architecture {
         }
     }
 
+    #[allow(clippy::option_if_let_else)]
     pub(crate) fn apply(&self, builder: &FaustBuilder, dsp_code: &str) -> TokenStream {
         match self {
             Self::None => {
@@ -56,6 +57,11 @@ impl Architecture {
                 architecture_interface.apply(builder, &ts)
             }
             Self::File(_path_buf) => {
+                let dsp_code = if let Some(mn) = builder.get_module_name() {
+                    &dsp_code.replace("<<moduleName>>", mn)
+                } else {
+                    dsp_code
+                };
                 parse_str::<TokenStream>(dsp_code).expect("Failed to parse string into tokens")
             }
         }

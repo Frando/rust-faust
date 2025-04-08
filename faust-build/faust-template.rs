@@ -1,4 +1,4 @@
-pub mod dsp{
+pub mod <<moduleName>>{
     #![allow(clippy::all)]
     #![allow(unused_parens)]
     #![allow(non_snake_case)]

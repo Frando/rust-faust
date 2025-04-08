@@ -11,6 +11,6 @@ fn main() {
         "../../faust-build/faust-template.rs".into(),
     ));
     b.struct_name_from_dsp_name();
-
+    b.set_module_name("dsp");
     b.build();
 }
