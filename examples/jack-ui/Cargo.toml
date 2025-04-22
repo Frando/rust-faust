@@ -20,7 +20,7 @@ strum = { version = "0.27", features = ["derive"] }
 
 
 [build-dependencies]
-faust-build = { path = "../../faust-build" }
+faust-build = { path = "../../faust-build", features = ["faust-ui"]}
 faust-json =  { path = "../../faust-json" }
 serde_json = "*"
 quote = "^1.0"
