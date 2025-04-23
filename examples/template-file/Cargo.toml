@@ -10,8 +10,7 @@ edition = "2018"
 default = ["default-boxed"]
 
 [dependencies]
-faust-types = { git = "http://github.com/Frando/rust-faust.git" }
-#faust-types = { path = "../../faust-types" }
+faust-types = { path = "../../faust-types" }
 faust-state = { path = "../../faust-state" }
 jack-utils = { path = "../jack-utils" }
 jack = "0.13"
