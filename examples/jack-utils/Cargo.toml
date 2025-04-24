@@ -7,8 +7,7 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-faust-types = { git = "http://github.com/Frando/rust-faust.git" }
-#faust-types = { path = "../../faust-types" }
+faust-types = { path = "../../faust-types" }
 faust-state = { path = "../../faust-state" }
 jack = "0.13"
 

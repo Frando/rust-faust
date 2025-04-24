@@ -14,5 +14,5 @@ proc-macro = true
 [features]
 
 [dependencies]
-faust-build = { git = "http://github.com/Frando/rust-faust.git" ,features = ["faust-ui"]}
+faust-build = { path = "../faust-build" ,features = ["faust-ui"]}
 syn = { version = "^2.0", default-features = false }
