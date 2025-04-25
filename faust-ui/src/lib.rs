@@ -14,6 +14,7 @@ use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 
 pub mod enum_interface;
+pub mod meta_strings;
 pub mod struct_interface;
 
 #[must_use]
@@ -25,10 +26,12 @@ pub fn generate_ui_code(faust_json: &FaustJson, struct_name: impl AsRef<str>) ->
 
     let ui_enum = enum_interface::create(faust_json, &struct_name);
     let struct_interface = struct_interface::create(faust_json, &ui_static_name, &ui_type);
+    let meta_strings = meta_strings::create(faust_json);
 
     let ui_code = quote! {
         #ui_enum
         #struct_interface
+        #meta_strings
     };
     ui_code
 }
