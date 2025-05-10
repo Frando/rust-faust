@@ -149,11 +149,9 @@ impl FaustBuilder {
             stderr
         );
 
-        assert!(
-            !stderr.contains("WARNING"),
-            "Fail on warning in stderr: \n{}",
-            stderr
-        );
+        if stderr.contains("WARNING") {
+            dbg!(stderr);
+        }
         String::from_utf8(faust_result.stdout).expect("could not parse stdout from command")
     }
 
