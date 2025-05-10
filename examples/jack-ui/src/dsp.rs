@@ -343,3 +343,34 @@ impl DspUiVolume {
     }
 }
 pub static DSP_UI: DspUiVolume = DspUiVolume::static_ui();
+pub mod meta {
+    pub const AUTHOR: &'static str = "Franz Heinzmann";
+    pub const COMPILE_OPTIONS: &'static str = "-lang rust -ct 1 -cn Volume -es 1 -mcd 16 -mdd 1024 -mdy 33 -single -ftz 0";
+    pub const FILENAME: &'static str = "volume.dsp";
+    pub const LICENSE: &'static str = "BSD";
+    pub const NAME: &'static str = "volume";
+    pub const OPTIONS: &'static str = "[osc:on]";
+    pub const VERSION: &'static str = "1.0";
+    pub mod libs {
+        pub mod basics {
+            pub const NAME: &'static str = "Faust Basic Element Library";
+            pub const TABULATEND: &'static str = "Copyright (C) 2023 Bart Brouns <bart@magnetophon.nl>";
+            pub const VERSION: &'static str = "1.21.0";
+        }
+        pub mod maths {
+            pub const AUTHOR: &'static str = "GRAME";
+            pub const COPYRIGHT: &'static str = "GRAME";
+            pub const LICENSE: &'static str = "LGPL with exception";
+            pub const NAME: &'static str = "Faust Math Library";
+            pub const VERSION: &'static str = "2.8.1";
+        }
+        pub mod platform {
+            pub const NAME: &'static str = "Generic Platform Library";
+            pub const VERSION: &'static str = "1.3.0";
+        }
+        pub mod signals {
+            pub const NAME: &'static str = "Faust Signal Routing Library";
+            pub const VERSION: &'static str = "1.6.0";
+        }
+    }
+}

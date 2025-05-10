@@ -10,6 +10,9 @@ use triple_buffer::triple_buffer;
 mod dsp;
 
 fn main() {
+    println!("Author: {}", dsp::meta::AUTHOR);
+    println!("DSP Name: {}", dsp::meta::NAME);
+
     let mut dsp = Volume::new();
     // Get number of inputs and ouputs
     let num_inputs = dsp.get_num_inputs() as usize;
